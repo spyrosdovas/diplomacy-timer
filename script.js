@@ -1,3 +1,4 @@
+const DiplomacyTimer = () => {
 import React, { useState, useEffect, useRef } from 'react';
 
 const DiplomacyTimer = () => {
@@ -531,4 +532,4 @@ const DiplomacyTimer = () => {
   );
 };
 
-export default DiplomacyTimer;
+}
