@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app"></div>
+    <div id="root"></div>
     
     <!-- React and React DOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -18,5 +18,11 @@
     
     <!-- Your React component -->
     <script type="text/babel" src="script.js"></script>
+    
+    <!-- Initialize React -->
+    <script type="text/babel">
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DiplomacyTimer />);
+    </script>
 </body>
 </html>
