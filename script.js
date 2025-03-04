@@ -1,3 +1,5 @@
+import React, { useState, useEffect, useRef } from 'react';
+
 const DiplomacyTimer = () => {
   const [page, setPage] = useState('setup');
   
