@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diplomacy Game Timer</title>
+    <title>Diplomacy Game Timer v1.2</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,24 +40,30 @@
           const [fallMinutes, setFallMinutes] = React.useState(12);
           const [orderMinutes, setOrderMinutes] = React.useState(1);
           const [winterMinutes, setWinterMinutes] = React.useState(2);
-          const [autoPause, setAutoPause] = React.useState(true);
+          const [endYear, setEndYear] = React.useState(1907);
+          const [pauseForAdjudication, setPauseForAdjudication] = React.useState(true);
           
           // Timer state
           const [currentYear, setCurrentYear] = React.useState(1901);
           const [currentPhase, setCurrentPhase] = React.useState('Spring Negotiation');
           const [seconds, setSeconds] = React.useState(0);
-          const [timerRunning, setTimerRunning] = React.useState(false);
-          const [timerPaused, setTimerPaused] = React.useState(false);
+          const [isRunning, setIsRunning] = React.useState(false);
+          const [gameEnded, setGameEnded] = React.useState(false);
+          const [comingFromOrderPhase, setComingFromOrderPhase] = React.useState(false);
           
           // Timer interval reference
           const timerInterval = React.useRef(null);
           
           // Handle start button click
           const handleStartClick = () => {
-            console.log("Start button clicked!");
             setSeconds(springMinutes * 60);
             setPage('timer');
-            console.log("Page state set to 'timer'");
+            
+            // If starting in Spring Negotiation and coming from order phase, should start paused
+            // This will be false for the initial game start
+            if (pauseForAdjudication && comingFromOrderPhase) {
+              setIsRunning(false);
+            }
           };
           
           // Reset timer
@@ -66,8 +72,9 @@
             setPage('setup');
             setCurrentYear(1901);
             setCurrentPhase('Spring Negotiation');
-            setTimerRunning(false);
-            setTimerPaused(false);
+            setIsRunning(false);
+            setGameEnded(false);
+            setComingFromOrderPhase(false);
           };
           
           // Format time as MM:SS
@@ -83,99 +90,177 @@
           };
           
           // Toggle timer running state
-          const toggleTimer = () => {
-            setTimerRunning(!timerRunning);
-            setTimerPaused(false);
+          const toggleRunning = () => {
+            setIsRunning(!isRunning);
           };
           
-          // Toggle pause state
-          const togglePause = () => {
-            setTimerPaused(!timerPaused);
+          // Check if game should end
+          const checkGameEnd = (year, phase) => {
+            return (year === endYear && phase === 'Winter Build/Disband');
+          };
+          
+          // Check if current phase is a negotiation phase
+          const isNegotiationPhase = (phase) => {
+            return phase === 'Spring Negotiation' || phase === 'Fall Negotiation';
+          };
+          
+          // Check if current phase is a winter build/disband phase
+          const isWinterPhase = (phase) => {
+            return phase === 'Winter Build/Disband';
+          };
+          
+          // Check if current phase is an order writing phase
+          const isOrderPhase = (phase) => {
+            return phase === 'Spring Order Writing' || phase === 'Fall Order Writing';
+          };
+          
+          // Check if the phase should pause for adjudication
+          const shouldPauseForAdjudication = (phase) => {
+            return isNegotiationPhase(phase) || isWinterPhase(phase);
           };
           
           // Move to next phase
           const goToNextPhase = () => {
+            // Save whether the timer was running before the phase change
+            const wasRunning = isRunning;
+            
+            // Temporarily stop the timer
+            setIsRunning(false);
             clearInterval(timerInterval.current);
-            setTimerRunning(false);
+            
+            let nextYear = currentYear;
+            let nextPhase = '';
+            let isComingFromOrderPhase = isOrderPhase(currentPhase);
             
             switch(currentPhase) {
               case 'Spring Negotiation':
                 if (orderMinutes > 0) {
-                  setCurrentPhase('Spring Order Writing');
+                  nextPhase = 'Spring Order Writing';
                   setSeconds(orderMinutes * 60);
                 } else {
-                  setCurrentPhase('Fall Negotiation');
+                  nextPhase = 'Fall Negotiation';
                   setSeconds(fallMinutes * 60);
                 }
                 break;
               case 'Spring Order Writing':
-                setCurrentPhase('Fall Negotiation');
+                nextPhase = 'Fall Negotiation';
                 setSeconds(fallMinutes * 60);
-                if (autoPause) setTimerPaused(true);
                 break;
               case 'Fall Negotiation':
                 if (orderMinutes > 0) {
-                  setCurrentPhase('Fall Order Writing');
+                  nextPhase = 'Fall Order Writing';
                   setSeconds(orderMinutes * 60);
                 } else {
-                  setCurrentPhase('Winter Build/Disband');
+                  nextPhase = 'Winter Build/Disband';
                   setSeconds(winterMinutes * 60);
                 }
                 break;
               case 'Fall Order Writing':
-                setCurrentPhase('Winter Build/Disband');
+                nextPhase = 'Winter Build/Disband';
                 setSeconds(winterMinutes * 60);
-                if (autoPause) setTimerPaused(true);
                 break;
               case 'Winter Build/Disband':
-                setCurrentYear(y => y + 1);
-                setCurrentPhase('Spring Negotiation');
+                nextYear = currentYear + 1;
+                nextPhase = 'Spring Negotiation';
                 setSeconds(springMinutes * 60);
-                if (autoPause) setTimerPaused(true);
+                break;
+              default:
+                nextPhase = currentPhase;
                 break;
             }
+            
+            // Update if we're coming from an order phase
+            setComingFromOrderPhase(isComingFromOrderPhase);
+            
+            // Check if this is the end of the game
+            const isGameEnd = checkGameEnd(nextYear, nextPhase);
+            
+            // Update phase and year state
+            setCurrentYear(nextYear);
+            setCurrentPhase(nextPhase);
+            
+            // Use setTimeout to ensure state updates have been processed
+            setTimeout(() => {
+              if (isGameEnd) {
+                setGameEnded(true);
+                // Announce game end
+                if (window.speechSynthesis) {
+                  window.speechSynthesis.cancel();
+                  const utterance = new SpeechSynthesisUtterance("Game over!");
+                  window.speechSynthesis.speak(utterance);
+                }
+              } else if (pauseForAdjudication && isComingFromOrderPhase && shouldPauseForAdjudication(nextPhase)) {
+                // If we're coming from an order phase and going to a negotiation or winter phase, and the pause toggle is on
+                setIsRunning(false); // Keep timer paused
+              } else if (wasRunning) {
+                // Otherwise, restore the running state if it was running before
+                setIsRunning(true);
+              }
+            }, 50);
           };
           
           // Go to previous phase
           const goToPrevPhase = () => {
+            const wasRunning = isRunning;
+            setIsRunning(false);
             clearInterval(timerInterval.current);
-            setTimerRunning(false);
+            
+            let prevYear = currentYear;
+            let prevPhase = '';
             
             switch(currentPhase) {
               case 'Spring Negotiation':
                 if (currentYear > 1901) {
-                  setCurrentYear(y => y - 1);
-                  setCurrentPhase('Winter Build/Disband');
+                  prevYear = currentYear - 1;
+                  prevPhase = 'Winter Build/Disband';
                   setSeconds(winterMinutes * 60);
+                } else {
+                  // Can't go back before 1901
+                  return;
                 }
                 break;
               case 'Spring Order Writing':
-                setCurrentPhase('Spring Negotiation');
+                prevPhase = 'Spring Negotiation';
                 setSeconds(springMinutes * 60);
                 break;
               case 'Fall Negotiation':
                 if (orderMinutes > 0) {
-                  setCurrentPhase('Spring Order Writing');
+                  prevPhase = 'Spring Order Writing';
                   setSeconds(orderMinutes * 60);
                 } else {
-                  setCurrentPhase('Spring Negotiation');
+                  prevPhase = 'Spring Negotiation';
                   setSeconds(springMinutes * 60);
                 }
                 break;
               case 'Fall Order Writing':
-                setCurrentPhase('Fall Negotiation');
+                prevPhase = 'Fall Negotiation';
                 setSeconds(fallMinutes * 60);
                 break;
               case 'Winter Build/Disband':
                 if (orderMinutes > 0) {
-                  setCurrentPhase('Fall Order Writing');
+                  prevPhase = 'Fall Order Writing';
                   setSeconds(orderMinutes * 60);
                 } else {
-                  setCurrentPhase('Fall Negotiation');
+                  prevPhase = 'Fall Negotiation';
                   setSeconds(fallMinutes * 60);
                 }
                 break;
+              default:
+                prevPhase = currentPhase;
+                break;
             }
+            
+            setGameEnded(false);
+            setCurrentYear(prevYear);
+            setCurrentPhase(prevPhase);
+            setComingFromOrderPhase(false); // Reset this flag when moving backward
+            
+            // Restore running state after a short delay
+            setTimeout(() => {
+              if (wasRunning) {
+                setIsRunning(true);
+              }
+            }, 50);
           };
           
           // Announce remaining time
@@ -201,16 +286,21 @@
           
           // Timer effect
           React.useEffect(() => {
-            if (timerRunning && !timerPaused) {
+            if (isRunning && !gameEnded) {
               timerInterval.current = setInterval(() => {
                 setSeconds(prev => {
+                  // Announce time at specific intervals
                   if ([600, 300, 60, 30, 15, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0].includes(prev)) {
                     announceTime(prev);
                   }
                   
+                  // Handle countdown reaching zero
                   if (prev <= 0) {
                     clearInterval(timerInterval.current);
-                    goToNextPhase();
+                    // Use setTimeout to avoid state update conflicts
+                    setTimeout(() => {
+                      goToNextPhase();
+                    }, 50);
                     return 0;
                   }
                   return prev - 1;
@@ -220,8 +310,9 @@
               clearInterval(timerInterval.current);
             }
             
+            // Cleanup interval on unmount or when dependencies change
             return () => clearInterval(timerInterval.current);
-          }, [timerRunning, timerPaused]);
+          }, [isRunning, gameEnded]);
           
           // Setup page
           if (page === 'setup') {
@@ -320,15 +411,34 @@
                   />
                 </div>
                 
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    End Year (game ends at Winter phase):
+                  </label>
+                  <input 
+                    type="number"
+                    min="1901" 
+                    value={endYear}
+                    onChange={e => setEndYear(Math.max(1901, parseInt(e.target.value) || 1907))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      fontSize: '16px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px'
+                    }}
+                  />
+                </div>
+                
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
                     <input 
                       type="checkbox"
-                      checked={autoPause}
-                      onChange={() => setAutoPause(!autoPause)}
+                      checked={pauseForAdjudication}
+                      onChange={() => setPauseForAdjudication(!pauseForAdjudication)}
                       style={{ marginRight: '8px', width: '20px', height: '20px' }}
                     />
-                    Pause after order writing and winter phases
+                    Pause after order writing for adjudication
                   </label>
                 </div>
                 
@@ -370,7 +480,12 @@
                 marginBottom: '20px'
               }}>
                 <h2 style={{ fontSize: '24px', margin: 0 }}>{currentYear}</h2>
-                <h2 style={{ fontSize: '24px', margin: 0 }}>{currentPhase}</h2>
+                <h2 style={{ fontSize: '24px', margin: 0 }}>
+                  {currentPhase}
+                  {gameEnded && <span style={{color: 'red', marginLeft: '10px'}}>(GAME OVER)</span>}
+                  {pauseForAdjudication && comingFromOrderPhase && shouldPauseForAdjudication(currentPhase) && !isRunning && 
+                    <span style={{color: 'blue', marginLeft: '10px'}}>(Adjudication)</span>}
+                </h2>
                 <button 
                   onClick={resetTimer}
                   style={{
@@ -389,7 +504,7 @@
               
               <div style={{ textAlign: 'center', margin: '30px 0' }}>
                 <div style={{ 
-                  fontSize: '300px', 
+                  fontSize: '250px', 
                   fontFamily: 'monospace', 
                   lineHeight: '1',
                   fontWeight: 'bold'
@@ -513,36 +628,20 @@
                 </button>
                 
                 <button 
-                  onClick={toggleTimer}
+                  onClick={toggleRunning}
+                  disabled={gameEnded}
                   style={{
-                    backgroundColor: timerRunning ? '#FF9800' : '#4CAF50',
+                    backgroundColor: gameEnded ? '#ccc' : (isRunning ? '#FF9800' : '#4CAF50'),
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
                     padding: '12px 24px',
                     fontSize: '18px',
-                    cursor: 'pointer'
+                    cursor: gameEnded ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {timerRunning ? 'Stop' : 'Start'}
+                  {isRunning ? 'Pause' : 'Start'}
                 </button>
-                
-                {timerRunning && (
-                  <button 
-                    onClick={togglePause}
-                    style={{
-                      backgroundColor: timerPaused ? '#4CAF50' : '#FF9800',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '12px 24px',
-                      fontSize: '18px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {timerPaused ? 'Resume' : 'Pause'}
-                  </button>
-                )}
                 
                 <button 
                   onClick={goToNextPhase}
