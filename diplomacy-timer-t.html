@@ -20,133 +20,122 @@
             padding: 10px;
         }
         
-        /* Switch toggle styles */
-        .toggle-container {
+        /* View mode selector styles */
+        .view-mode-selector {
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             margin-bottom: 20px;
         }
         
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 30px;
-            margin: 0 10px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
+        .view-mode-button {
+            background-color: #ddd;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 0 5px;
             cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
+            font-weight: bold;
         }
         
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .toggle-slider {
+        .view-mode-button.active {
             background-color: #2196F3;
+            color: white;
         }
         
-        input:checked + .toggle-slider:before {
-            transform: translateX(30px);
+        /* Mobile styles */
+        .mobile .timer-display {
+            font-size: 100px !important;
+            margin: 15px 0 !important;
         }
         
-        /* Mobile styles that apply when in mobile mode or on small screens in auto mode */
-        .mobile-view .setup-container,
-        .mobile-view .timer-container,
-        .auto-view .setup-container,
-        .auto-view .timer-container {
-            width: 100% !important;
-            padding: 15px !important;
-        }
-        
-        .mobile-view .phase-header,
-        .auto-view .phase-header {
+        .mobile .phase-header {
             flex-direction: column !important;
             align-items: flex-start !important;
             gap: 10px !important;
         }
         
-        .mobile-view .phase-header h2,
-        .auto-view .phase-header h2 {
+        .mobile .phase-header h2 {
             margin: 0 !important;
             font-size: 18px !important;
         }
         
-        .mobile-view .timer-display,
-        .auto-view .timer-display {
-            font-size: 100px !important;
-            margin: 15px 0 !important;
-        }
-        
-        .mobile-view .button-row,
-        .auto-view .button-row {
+        .mobile .button-row {
             gap: 5px !important;
         }
         
-        .mobile-view .time-button,
-        .auto-view .time-button {
+        .mobile .time-button {
             padding: 8px 12px !important;
             font-size: 14px !important;
         }
         
-        .mobile-view .phase-button,
-        .auto-view .phase-button {
+        .mobile .phase-button {
             padding: 10px 15px !important;
             font-size: 16px !important;
             margin-bottom: 5px !important;
         }
         
-        /* Extra small devices */
+        /* Responsive styles for auto mode */
+        @media (max-width: 768px) {
+            .auto .timer-display {
+                font-size: 100px !important;
+                margin: 15px 0 !important;
+            }
+            
+            .auto .phase-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+            }
+            
+            .auto .phase-header h2 {
+                margin: 0 !important;
+                font-size: 18px !important;
+            }
+            
+            .auto .button-row {
+                gap: 5px !important;
+            }
+            
+            .auto .time-button {
+                padding: 8px 12px !important;
+                font-size: 14px !important;
+            }
+            
+            .auto .phase-button {
+                padding: 10px 15px !important;
+                font-size: 16px !important;
+                margin-bottom: 5px !important;
+            }
+        }
+        
         @media (max-width: 480px) {
-            .auto-view .timer-display {
+            .auto .timer-display {
                 font-size: 80px !important;
             }
             
-            .auto-view .time-button {
+            .auto .time-button {
                 padding: 6px 10px !important;
                 font-size: 12px !important;
             }
             
-            .auto-view .phase-button {
+            .auto .phase-button {
                 padding: 8px 12px !important;
                 font-size: 14px !important;
                 flex-grow: 1 !important;
             }
             
-            .mobile-view .timer-display {
+            .mobile .timer-display {
                 font-size: 80px !important;
             }
             
-            .mobile-view .time-button {
+            .mobile .time-button {
                 padding: 6px 10px !important;
                 font-size: 12px !important;
             }
             
-            .mobile-view .phase-button {
+            .mobile .phase-button {
                 padding: 8px 12px !important;
                 font-size: 14px !important;
                 flex-grow: 1 !important;
@@ -169,7 +158,7 @@
         const DiplomacyTimer = () => {
           const [page, setPage] = React.useState('setup');
           
-          // Display mode: 'auto' (responsive), 'desktop', or 'mobile'
+          // Display mode: 'auto', 'desktop', or 'mobile'
           const [displayMode, setDisplayMode] = React.useState('auto');
           
           // Setup values
@@ -451,26 +440,34 @@
             return () => clearInterval(timerInterval.current);
           }, [isRunning, gameEnded]);
           
-          // Toggle display mode
-          const toggleDisplayMode = () => {
-            setDisplayMode(prev => {
-              if (prev === 'auto') return 'desktop';
-              if (prev === 'desktop') return 'mobile';
-              return 'auto';
-            });
-          };
-          
-          // Get container class based on display mode
-          const getContainerClass = () => {
-            if (displayMode === 'auto') return 'auto-view';
-            if (displayMode === 'mobile') return 'mobile-view';
-            return 'desktop-view';
-          };
+          // View mode selector component
+          const ViewModeSelector = () => (
+            <div className="view-mode-selector">
+              <button 
+                className={`view-mode-button ${displayMode === 'desktop' ? 'active' : ''}`}
+                onClick={() => setDisplayMode('desktop')}
+              >
+                Desktop
+              </button>
+              <button 
+                className={`view-mode-button ${displayMode === 'auto' ? 'active' : ''}`}
+                onClick={() => setDisplayMode('auto')}
+              >
+                Auto
+              </button>
+              <button 
+                className={`view-mode-button ${displayMode === 'mobile' ? 'active' : ''}`}
+                onClick={() => setDisplayMode('mobile')}
+              >
+                Mobile
+              </button>
+            </div>
+          );
           
           // Setup page
           if (page === 'setup') {
             return (
-              <div className={`setup-container ${getContainerClass()}`} style={{ 
+              <div className={`setup-container ${displayMode}`} style={{ 
                 width: '100%',
                 maxWidth: '600px', 
                 margin: '0 auto', 
@@ -489,18 +486,7 @@
                   Diplomacy Game Timer
                 </h1>
                 
-                <div className="toggle-container">
-                  <span>Desktop</span>
-                  <label className="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      checked={displayMode !== 'desktop'} 
-                      onChange={toggleDisplayMode}
-                    />
-                    <span className="toggle-slider"></span>
-                  </label>
-                  <span>{displayMode === 'auto' ? 'Auto' : 'Mobile'}</span>
-                </div>
+                <ViewModeSelector />
                 
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
@@ -636,7 +622,7 @@
           
           // Timer page
           return (
-            <div className={`timer-container ${getContainerClass()}`} style={{ 
+            <div className={`timer-container ${displayMode}`} style={{ 
               width: '100%',
               maxWidth: '800px', 
               margin: '0 auto', 
@@ -677,7 +663,7 @@
               
               <div style={{ textAlign: 'center', margin: '30px 0' }}>
                 <div className="timer-display" style={{ 
-                  fontSize: '170px', 
+                  fontSize: displayMode === 'desktop' ? '250px' : '170px', 
                   fontFamily: 'monospace', 
                   lineHeight: '1',
                   fontWeight: 'bold'
@@ -694,7 +680,7 @@
                 marginBottom: '20px'
               }}>
                 {/* Show different buttons based on view mode */}
-                {(displayMode === 'desktop') ? (
+                {displayMode === 'desktop' ? (
                   // Desktop view buttons (original style)
                   <>
                     <button 
@@ -704,6 +690,87 @@
                         backgroundColor: '#2196F3',
                         color: 'white',
                         border: 'none',
+                        borderRadius: '4px',
+                        padding: '8px 16px',
+                        fontSize: '16px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      -1m
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '15px',
+                flexWrap: 'wrap'
+              }}>
+                <button 
+                  className="phase-button"
+                  onClick={goToPrevPhase}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    fontSize: '18px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {displayMode === 'desktop' ? 'Previous Phase' : 'Prev'}
+                </button>
+                
+                <button 
+                  className="phase-button"
+                  onClick={toggleRunning}
+                  disabled={gameEnded}
+                  style={{
+                    backgroundColor: gameEnded ? '#ccc' : (isRunning ? '#FF9800' : '#4CAF50'),
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    fontSize: '18px',
+                    cursor: gameEnded ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isRunning ? 'Pause' : 'Start'}
+                </button>
+                
+                <button 
+                  className="phase-button"
+                  onClick={goToNextPhase}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    fontSize: '18px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {displayMode === 'desktop' ? 'Next Phase' : 'Next'}
+                </button>
+              </div>
+              
+              {/* Display mode selector at the bottom of timer page */}
+              <div style={{ marginTop: '30px' }}>
+                <ViewModeSelector />
+              </div>
+            </div>
+          );
+        };
+
+        // Render the app
+        ReactDOM.render(<DiplomacyTimer />, document.getElementById('root'));
+    </script>
+</body>
+</html>none',
                         borderRadius: '4px',
                         padding: '8px 16px',
                         fontSize: '16px',
@@ -842,99 +909,4 @@
                       style={{
                         backgroundColor: '#2196F3',
                         color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '8px 16px',
-                        fontSize: '16px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      -1m
-                    </button>
-                  </>
-                )}
-              </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '15px',
-                flexWrap: 'wrap'
-              }}>
-                <button 
-                  className="phase-button"
-                  onClick={goToPrevPhase}
-                  style={{
-                    backgroundColor: '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '12px 24px',
-                    fontSize: '18px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {displayMode === 'desktop' ? 'Previous Phase' : 'Prev'}
-                </button>
-                
-                <button 
-                  className="phase-button"
-                  onClick={toggleRunning}
-                  disabled={gameEnded}
-                  style={{
-                    backgroundColor: gameEnded ? '#ccc' : (isRunning ? '#FF9800' : '#4CAF50'),
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '12px 24px',
-                    fontSize: '18px',
-                    cursor: gameEnded ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isRunning ? 'Pause' : 'Start'}
-                </button>
-                
-                <button 
-                  className="phase-button"
-                  onClick={goToNextPhase}
-                  style={{
-                    backgroundColor: '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '12px 24px',
-                    fontSize: '18px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {displayMode === 'desktop' ? 'Next Phase' : 'Next'}
-                </button>
-                
-                {/* Add display mode toggle on timer page */}
-                <div className="toggle-container" style={{ 
-                  width: '100%', 
-                  marginTop: '20px', 
-                  display: 'flex', 
-                  justifyContent: 'center' 
-                }}>
-                  <span>Desktop</span>
-                  <label className="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      checked={displayMode !== 'desktop'} 
-                      onChange={toggleDisplayMode}
-                    />
-                    <span className="toggle-slider"></span>
-                  </label>
-                  <span>{displayMode === 'auto' ? 'Auto' : 'Mobile'}</span>
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // Render the app
-        ReactDOM.render(<DiplomacyTimer />, document.getElementById('root'));
-    </script>
-</body>
-</html>
+                        border: '
