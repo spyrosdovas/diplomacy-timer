@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diplomacy Game Timer v1.3</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        #root {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .setup-container {
+                width: 100% !important;
+                padding: 15px !important;
+            }
+            
+            .timer-container {
+                width: 100% !important;
+                padding: 15px !important;
+            }
+            
+            .phase-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px !important;
+            }
+            
+            .phase-header h2 {
+                margin: 0 !important;
+                font-size: 18px !important;
+            }
+            
+            .timer-display {
+                font-size: 100px !important;
+                margin: 15px 0 !important;
+            }
+            
+            .button-row {
+                gap: 5px !important;
+            }
+            
+            .time-button {
+                padding: 8px 12px !important;
+                font-size: 14px !important;
+            }
+            
+            .phase-button {
+                padding: 10px 15px !important;
+                font-size: 16px !important;
+                margin-bottom: 5px !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .timer-display {
+                font-size: 80px !important;
+            }
+            
+            .time-button {
+                padding: 6px 10px !important;
+                font-size: 12px !important;
+            }
+            
+            .phase-button {
+                padding: 8px 12px !important;
+                font-size: 14px !important;
+                flex-grow: 1 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- React and React DOM -->
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    
+    <!-- Your React component -->
+    <script type="text/babel">
+        const DiplomacyTimer = () => {
+          const [page, setPage] = React.useState('setup');
+          
+          // Setup values
+          const [springMinutes, setSpringMinutes] = React.useState(14);
+          const [fallMinutes, setFallMinutes] = React.useState(12);
+          const [orderMinutes, setOrderMinutes] = React.useState(1);
+          const [winterMinutes, setWinterMinutes] = React.useState(2);
+          const [endYear, setEndYear] = React.useState(1907);
+          const [pauseForAdjudication, setPauseForAdjudication] = React.useState(true);
+          
+          // Timer state
+          const [currentYear, setCurrentYear] = React.useState(1901);
+          const [currentPhase, setCurrentPhase] = React.useState('Spring Negotiation');
+          const [seconds, setSeconds] = React.useState(0);
+          const [isRunning, setIsRunning] = React.useState(false);
+          const [gameEnded, setGameEnded] = React.useState(false);
+          const [comingFromOrderPhase, setComingFromOrderPhase] = React.useState(false);
+          
+          // Timer interval reference
+          const timerInterval = React.useRef(null);
+          
+          // Handle start button click
+          const handleStartClick = () => {
+            setSeconds(springMinutes * 60);
+            setPage('timer');
+            
+            // If starting in Spring Negotiation and coming from order phase, should start paused
+            // This will be false for the initial game start
+            if (pauseForAdjudication && comingFromOrderPhase) {
+              setIsRunning(false);
+            }
+          };
+          
+          // Reset timer
+          const resetTimer = () => {
+            clearInterval(timerInterval.current);
+            setPage('setup');
+            setCurrentYear(1901);
+            setCurrentPhase('Spring Negotiation');
+            setIsRunning(false);
+            setGameEnded(false);
+            setComingFromOrderPhase(false);
+          };
+          
+          // Format time as MM:SS
+          const formatTime = (totalSeconds) => {
+            const minutes = Math.floor(totalSeconds / 60);
+            const remainingSeconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+          };
+          
+          // Adjust time
+          const adjustTime = (delta) => {
+            setSeconds(prev => Math.max(0, prev + delta));
+          };
+          
+          // Toggle timer running state
+          const toggleRunning = () => {
+            setIsRunning(!isRunning);
+          };
+          
+          // Check if game should end
+          const checkGameEnd = (year, phase) => {
+            return (year === endYear && phase === 'Winter Build/Disband');
+          };
+          
+          // Check if current phase is a negotiation phase
+          const isNegotiationPhase = (phase) => {
+            return phase === 'Spring Negotiation' || phase === 'Fall Negotiation';
+          };
+          
+          // Check if current phase is a winter build/disband phase
+          const isWinterPhase = (phase) => {
+            return phase === 'Winter Build/Disband';
+          };
+          
+          // Check if current phase is an order writing phase
+          const isOrderPhase = (phase) => {
+            return phase === 'Spring Order Writing' || phase === 'Fall Order Writing';
+          };
+          
+          // Check if the phase should pause for adjudication
+          const shouldPauseForAdjudication = (phase) => {
+            return isNegotiationPhase(phase) || isWinterPhase(phase);
+          };
+          
+          // Move to next phase
+          const goToNextPhase = () => {
+            // Save whether the timer was running before the phase change
+            const wasRunning = isRunning;
+            
+            // Temporarily stop the timer
+            setIsRunning(false);
+            clearInterval(timerInterval.current);
+            
+            let nextYear = currentYear;
+            let nextPhase = '';
+            let isComingFromOrderPhase = isOrderPhase(currentPhase);
+            
+            switch(currentPhase) {
+              case 'Spring Negotiation':
+                if (orderMinutes > 0) {
+                  nextPhase = 'Spring Order Writing';
+                  setSeconds(orderMinutes * 60);
+                } else {
+                  nextPhase = 'Fall Negotiation';
+                  setSeconds(fallMinutes * 60);
+                }
+                break;
+              case 'Spring Order Writing':
+                nextPhase = 'Fall Negotiation';
+                setSeconds(fallMinutes * 60);
+                break;
+              case 'Fall Negotiation':
+                if (orderMinutes > 0) {
+                  nextPhase = 'Fall Order Writing';
+                  setSeconds(orderMinutes * 60);
+                } else {
+                  nextPhase = 'Winter Build/Disband';
+                  setSeconds(winterMinutes * 60);
+                }
+                break;
+              case 'Fall Order Writing':
+                nextPhase = 'Winter Build/Disband';
+                setSeconds(winterMinutes * 60);
+                break;
+              case 'Winter Build/Disband':
+                nextYear = currentYear + 1;
+                nextPhase = 'Spring Negotiation';
+                setSeconds(springMinutes * 60);
+                break;
+              default:
+                nextPhase = currentPhase;
+                break;
+            }
+            
+            // Update if we're coming from an order phase
+            setComingFromOrderPhase(isComingFromOrderPhase);
+            
+            // Check if this is the end of the game
+            const isGameEnd = checkGameEnd(nextYear, nextPhase);
+            
+            // Update phase and year state
+            setCurrentYear(nextYear);
+            setCurrentPhase(nextPhase);
+            
+            // Use setTimeout to ensure state updates have been processed
+            setTimeout(() => {
+              if (isGameEnd) {
+                setGameEnded(true);
+                // Announce game end
+                if (window.speechSynthesis) {
+                  window.speechSynthesis.cancel();
+                  const utterance = new SpeechSynthesisUtterance("Game over!");
+                  window.speechSynthesis.speak(utterance);
+                }
+              } else if (pauseForAdjudication && isComingFromOrderPhase && shouldPauseForAdjudication(nextPhase)) {
+                // If we're coming from an order phase and going to a negotiation or winter phase, and the pause toggle is on
+                setIsRunning(false); // Keep timer paused
+              } else if (wasRunning) {
+                // Otherwise, restore the running state if it was running before
+                setIsRunning(true);
+              }
+            }, 50);
+          };
+          
+          // Go to previous phase
+          const goToPrevPhase = () => {
+            const wasRunning = isRunning;
+            setIsRunning(false);
+            clearInterval(timerInterval.current);
+            
+            let prevYear = currentYear;
+            let prevPhase = '';
+            
+            switch(currentPhase) {
+              case 'Spring Negotiation':
+                if (currentYear > 1901) {
+                  prevYear = currentYear - 1;
+                  prevPhase = 'Winter Build/Disband';
+                  setSeconds(winterMinutes * 60);
+                } else {
+                  // Can't go back before 1901
+                  return;
+                }
+                break;
+              case 'Spring Order Writing':
+                prevPhase = 'Spring Negotiation';
+                setSeconds(springMinutes * 60);
+                break;
+              case 'Fall Negotiation':
+                if (orderMinutes > 0) {
+                  prevPhase = 'Spring Order Writing';
+                  setSeconds(orderMinutes * 60);
+                } else {
+                  prevPhase = 'Spring Negotiation';
+                  setSeconds(springMinutes * 60);
+                }
+                break;
+              case 'Fall Order Writing':
+                prevPhase = 'Fall Negotiation';
+                setSeconds(fallMinutes * 60);
+                break;
+              case 'Winter Build/Disband':
+                if (orderMinutes > 0) {
+                  prevPhase = 'Fall Order Writing';
+                  setSeconds(orderMinutes * 60);
+                } else {
+                  prevPhase = 'Fall Negotiation';
+                  setSeconds(fallMinutes * 60);
+                }
+                break;
+              default:
+                prevPhase = currentPhase;
+                break;
+            }
+            
+            setGameEnded(false);
+            setCurrentYear(prevYear);
+            setCurrentPhase(prevPhase);
+            setComingFromOrderPhase(false); // Reset this flag when moving backward
+            
+            // Restore running state after a short delay
+            setTimeout(() => {
+              if (wasRunning) {
+                setIsRunning(true);
+              }
+            }, 50);
+          };
+          
+          // Announce remaining time
+          const announceTime = (remainingSeconds) => {
+            if (!window.speechSynthesis) return;
+            
+            window.speechSynthesis.cancel();
+            
+            let message = '';
+            if (remainingSeconds === 600) message = '10 minutes remaining';
+            else if (remainingSeconds === 300) message = '5 minutes remaining';
+            else if (remainingSeconds === 60) message = '1 minute remaining';
+            else if (remainingSeconds === 30) message = '30 seconds remaining';
+            else if (remainingSeconds === 15) message = '15 seconds remaining';
+            else if (remainingSeconds <= 10 && remainingSeconds > 0) message = `${remainingSeconds}`;
+            else if (remainingSeconds === 0) message = 'Deadline!';
+            
+            if (message) {
+              const utterance = new SpeechSynthesisUtterance(message);
+              window.speechSynthesis.speak(utterance);
+            }
+          };
+          
+          // Timer effect
+          React.useEffect(() => {
+            if (isRunning && !gameEnded) {
+              timerInterval.current = setInterval(() => {
+                setSeconds(prev => {
+                  // Announce time at specific intervals
+                  if ([600, 300, 60, 30, 15, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0].includes(prev)) {
+                    announceTime(prev);
+                  }
+                  
+                  // Handle countdown reaching zero
+                  if (prev <= 0) {
+                    clearInterval(timerInterval.current);
+                    // Use setTimeout to avoid state update conflicts
+                    setTimeout(() => {
+                      goToNextPhase();
+                    }, 50);
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+            } else {
+              clearInterval(timerInterval.current);
+            }
+            
+            // Cleanup interval on unmount or when dependencies change
+            return () => clearInterval(timerInterval.current);
+          }, [isRunning, gameEnded]);
+          
+          // Setup page
+          if (page === 'setup') {
+            return (
+              <div className="setup-container" style={{ 
+                width: '100%',
+                maxWidth: '600px', 
+                margin: '0 auto', 
+                padding: '20px', 
+                fontFamily: 'Arial, sans-serif',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '10px',
+                boxShadow: '0 0 10px rgba(0,0,0,0.1)'
+              }}>
+                <h1 style={{ 
+                  textAlign: 'center', 
+                  color: '#333',
+                  fontSize: '28px',
+                  marginBottom: '20px'
+                }}>
+                  Diplomacy Game Timer
+                </h1>
+                
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Spring Negotiation (minutes):
+                  </label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={springMinutes}
+                    onChange={e => setSpringMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      fontSize: '16px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Fall Negotiation (minutes):
+                  </label>
+                  <input 
+                    type="number"
+                    min="1" 
+                    value={fallMinutes}
+                    onChange={e => setFallMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      fontSize: '16px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Order Writing (minutes, 0 to skip):
+                  </label>
+                  <input 
+                    type="number"
+                    min="0" 
+                    value={orderMinutes}
+                    onChange={e => setOrderMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      fontSize: '16px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Winter Build/Disband (minutes):
+                  </label>
+                  <input 
+                    type="number"
+                    min="1" 
+                    value={winterMinutes}
+                    onChange={e => setWinterMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      fontSize: '16px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    End Year (game ends at Winter phase):
+                  </label>
+                  <input 
+                    type="number"
+                    min="1901" 
+                    value={endYear}
+                    onChange={e => setEndYear(Math.max(1901, parseInt(e.target.value) || 1907))}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px', 
+                      fontSize: '16px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                    <input 
+                      type="checkbox"
+                      checked={pauseForAdjudication}
+                      onChange={() => setPauseForAdjudication(!pauseForAdjudication)}
+                      style={{ marginRight: '8px', width: '20px', height: '20px' }}
+                    />
+                    Pause after order writing for adjudication
+                  </label>
+                </div>
+                
+                <button 
+                  onClick={handleStartClick}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Start Game
+                </button>
+              </div>
+            );
+          }
+          
+          // Timer page
+          return (
+            <div className="timer-container" style={{ 
+              width: '100%',
+              maxWidth: '800px', 
+              margin: '0 auto', 
+              padding: '20px', 
+              fontFamily: 'Arial, sans-serif',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '10px',
+              boxShadow: '0 0 10px rgba(0,0,0,0.1)'
+            }}>
+              <div className="phase-header" style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px'
+              }}>
+                <h2 style={{ fontSize: '24px', margin: 0 }}>{currentYear}</h2>
+                <h2 style={{ fontSize: '24px', margin: 0 }}>
+                  {currentPhase}
+                  {gameEnded && <span style={{color: 'red', marginLeft: '10px'}}>(GAME OVER)</span>}
+                  {pauseForAdjudication && comingFromOrderPhase && shouldPauseForAdjudication(currentPhase) && !isRunning && 
+                    <span style={{color: 'blue', marginLeft: '10px'}}>(Adjudication)</span>}
+                </h2>
+                <button 
+                  onClick={resetTimer}
+                  style={{
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+              
+              <div style={{ textAlign: 'center', margin: '30px 0' }}>
+                <div className="timer-display" style={{ 
+                  fontSize: '170px', 
+                  fontFamily: 'monospace', 
+                  lineHeight: '1',
+                  fontWeight: 'bold'
+                }}>
+                  {formatTime(seconds)}
+                </div>
+              </div>
+              
+              <div className="button-row" style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '10px',
+                flexWrap: 'wrap',
+                marginBottom: '20px'
+              }}>
+                <button 
+                  className="time-button"
+                  onClick={() => adjustTime(60)}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  +1m
+                </button>
+                <button 
+                  className="time-button"
+                  onClick={() => adjustTime(10)}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  +10s
+                </button>
+                <button 
+                  className="time-button"
+                  onClick={() => adjustTime(-10)}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  -10s
+                </button>
+                <button 
+                  className="time-button"
+                  onClick={() => adjustTime(-60)}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  -1m
+                </button>
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '15px',
+                flexWrap: 'wrap'
+              }}>
+                <button 
+                  className="phase-button"
+                  onClick={goToPrevPhase}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    fontSize: '18px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Prev
+                </button>
+                
+                <button 
+                  className="phase-button"
+                  onClick={toggleRunning}
+                  disabled={gameEnded}
+                  style={{
+                    backgroundColor: gameEnded ? '#ccc' : (isRunning ? '#FF9800' : '#4CAF50'),
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    fontSize: '18px',
+                    cursor: gameEnded ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isRunning ? 'Pause' : 'Start'}
+                </button>
+                
+                <button 
+                  className="phase-button"
+                  onClick={goToNextPhase}
+                  style={{
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    fontSize: '18px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          );
+        };
+
+        // Render the app
+        ReactDOM.render(<DiplomacyTimer />, document.getElementById('root'));
+    </script>
+</body>
+</html>
