@@ -217,7 +217,7 @@
     const log = $('#game-log');
     const wasAtBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
     log.innerHTML = state.log.map((l) => `<div class="log-entry">${escapeHtml(l)}</div>`).join('');
-    if (wasAtBottom || true) log.scrollTop = log.scrollHeight;
+    if (wasAtBottom) log.scrollTop = log.scrollHeight;
 
     renderActionZone(state, me);
     renderMe(state, me);
@@ -225,13 +225,7 @@
 
   function renderOpponentCard(p, state) {
     const isTurn = state.turnPlayerId === p.id;
-    const pips = p.influences.map((c) => {
-      if (c.revealed) {
-        const meta = CHAR_META[c.card] || {};
-        return `<div class="pip revealed ${meta.cls || ''}" title="${c.card}">${meta.symbol || ''}</div>`;
-      }
-      return `<div class="pip facedown"></div>`;
-    }).join('');
+    const pips = p.influences.filter((c) => !c.revealed).map(() => `<div class="pip facedown"></div>`).join('');
     return `
       <div class="opp-card ${isTurn ? 'is-turn' : ''} ${p.alive ? '' : 'is-dead'}">
         ${!p.connected ? '<span class="opp-disconnected">⚠️</span>' : ''}
@@ -246,9 +240,9 @@
     if (!me) return;
     $('#me-name').textContent = me.name + (state.turnPlayerId === me.id ? ' (your turn)' : '');
     $('#me-coins').textContent = `🪙 ${me.coins}`;
-    $('#me-cards').innerHTML = me.influences.map((c) => {
+    $('#me-cards').innerHTML = me.influences.filter((c) => !c.revealed).map((c) => {
       const meta = CHAR_META[c.card] || {};
-      return `<div class="me-card ${meta.cls || ''} ${c.revealed ? 'revealed' : ''}">${c.card || '?'}</div>`;
+      return `<div class="me-card ${meta.cls || ''}">${c.card || '?'}</div>`;
     }).join('');
   }
 

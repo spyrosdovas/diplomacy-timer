@@ -251,7 +251,6 @@ button { font-family: var(--font-body); }
   font-size: 13px;
 }
 .pip.facedown { background: repeating-linear-gradient(135deg, #2a2226, #2a2226 4px, #221b1d 4px, #221b1d 8px); }
-.pip.revealed { color: #fff; font-weight: 700; }
 .opp-disconnected { position: absolute; top: 4px; right: 6px; font-size: 10px; color: var(--ink-faint); }
 
 .char-duke { background: linear-gradient(160deg, var(--duke), #4c2670); border-color: var(--duke); }
@@ -261,8 +260,8 @@ button { font-family: var(--font-body); }
 .char-contessa { background: linear-gradient(160deg, var(--contessa), #5c131c); border-color: var(--contessa); }
 
 .game-log {
-  flex: 1;
-  min-height: 60px;
+  flex: 0 0 auto;
+  height: 162px;
   overflow-y: auto;
   padding: 8px 16px;
   display: flex;
@@ -270,8 +269,14 @@ button { font-family: var(--font-body); }
   gap: 4px;
   font-size: 13px;
   color: var(--ink-dim);
+  border-bottom: 1px solid var(--border-soft);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold) transparent;
 }
-.game-log .log-entry { line-height: 1.4; }
+.game-log::-webkit-scrollbar { width: 6px; }
+.game-log::-webkit-scrollbar-track { background: transparent; }
+.game-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.game-log .log-entry { line-height: 1.4; flex: 0 0 auto; }
 .game-log .log-entry:last-child { color: var(--ink); font-weight: 500; }
 
 .action-zone {
@@ -350,7 +355,6 @@ button { font-family: var(--font-body); }
   font-size: 13px;
   color: #fff;
 }
-.me-card.revealed { opacity: 0.45; text-decoration: line-through; }
 
 /* ---------- Modals ---------- */
 .modal {
