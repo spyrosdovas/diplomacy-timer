@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: coup-online
+    env: node
+    plan: free
+    rootDir: coup
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
