@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Coup — Online</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♛</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+<div id="toast" class="toast hidden"></div>
+
+<!-- HOME SCREEN -->
+<section id="screen-home" class="screen">
+  <div class="home-wrap">
+    <div class="brand">
+      <div class="brand-crest">♛</div>
+      <h1>COUP</h1>
+      <p class="tagline">Deceive. Deduce. Survive.</p>
+    </div>
+
+    <div class="card-panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="create">Create Game</button>
+        <button class="tab-btn" data-tab="join">Join Game</button>
+      </div>
+
+      <div id="tab-create" class="tab-panel active">
+        <label class="field-label">Your Name</label>
+        <input id="create-name" class="text-input" maxlength="16" placeholder="e.g. Vito" autocomplete="off">
+        <button id="btn-create" class="btn btn-primary btn-block">Create Room</button>
+        <p class="hint">You'll get a 4-letter code to share with friends.</p>
+      </div>
+
+      <div id="tab-join" class="tab-panel">
+        <label class="field-label">Room Code</label>
+        <input id="join-code" class="text-input code-input" maxlength="4" placeholder="ABCD" autocomplete="off" autocapitalize="characters">
+        <label class="field-label">Your Name</label>
+        <input id="join-name" class="text-input" maxlength="16" placeholder="e.g. Sonny" autocomplete="off">
+        <button id="btn-join" class="btn btn-primary btn-block">Join Room</button>
+      </div>
+    </div>
+
+    <button id="btn-cheatsheet-home" class="btn btn-ghost btn-block">📜 View Cheat Sheet</button>
+  </div>
+</section>
+
+<!-- LOBBY SCREEN -->
+<section id="screen-lobby" class="screen hidden">
+  <header class="topbar">
+    <div class="room-code-display">
+      <span class="label">ROOM CODE</span>
+      <span id="lobby-code" class="code-big"></span>
+    </div>
+    <button id="btn-cheatsheet-lobby" class="icon-btn" title="Cheat Sheet">📜</button>
+  </header>
+
+  <div class="lobby-body">
+    <p class="hint center">Share this code — friends join at this page on their phones.</p>
+    <button id="btn-copy-link" class="btn btn-ghost btn-block">🔗 Copy Invite Link</button>
+
+    <h3 class="section-title">Players (<span id="lobby-count">0</span>/6)</h3>
+    <ul id="lobby-players" class="player-list"></ul>
+
+    <button id="btn-start" class="btn btn-primary btn-block" disabled>Start Game</button>
+    <p id="lobby-status" class="hint center"></p>
+    <button id="btn-leave-lobby" class="btn btn-text btn-block">Leave Room</button>
+  </div>
+</section>
+
+<!-- GAME SCREEN -->
+<section id="screen-game" class="screen hidden">
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="room-pill" id="game-code"></span>
+      <span class="deck-pill" id="deck-count">🂠 0</span>
+    </div>
+    <div class="topbar-right">
+      <button id="btn-cheatsheet-game" class="icon-btn" title="Cheat Sheet">📜</button>
+      <button id="btn-leave-game" class="icon-btn" title="Leave">✕</button>
+    </div>
+  </header>
+
+  <div id="opponents-row" class="opponents-row"></div>
+
+  <div id="game-log" class="game-log"></div>
+
+  <div id="action-zone" class="action-zone"></div>
+
+  <div class="me-panel">
+    <div class="me-header">
+      <span id="me-name" class="me-name"></span>
+      <span id="me-coins" class="me-coins">🪙 0</span>
+    </div>
+    <div id="me-cards" class="me-cards"></div>
+  </div>
+</section>
+
+<!-- TARGET PICKER MODAL -->
+<div id="modal-target" class="modal hidden">
+  <div class="modal-card">
+    <h3 id="target-title">Choose a target</h3>
+    <div id="target-list" class="target-list"></div>
+    <button class="btn btn-text btn-block" data-close-modal="modal-target">Cancel</button>
+  </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div id="modal-gameover" class="modal hidden">
+  <div class="modal-card gameover-card">
+    <div class="crown">♛</div>
+    <h2 id="gameover-title">Game Over</h2>
+    <p id="gameover-sub"></p>
+    <button id="btn-play-again" class="btn btn-primary btn-block">Return to Home</button>
+  </div>
+</div>
+
+<!-- CHEAT SHEET MODAL -->
+<div id="modal-cheatsheet" class="modal hidden">
+  <div class="modal-card cheatsheet-card">
+    <div class="cheatsheet-header">
+      <h2>Cheat Sheet</h2>
+      <button class="icon-btn" data-close-modal="modal-cheatsheet">✕</button>
+    </div>
+    <div class="cheatsheet-scroll">
+
+      <h4 class="cs-h">Base Actions <span class="cs-sub">(any player, any time — no character needed)</span></h4>
+      <div class="cs-grid">
+        <div class="cs-item plain">
+          <div class="cs-item-title">Income <span class="cs-tag">+1 coin</span></div>
+          <div class="cs-item-desc">Take 1 coin. Cannot be blocked or challenged.</div>
+        </div>
+        <div class="cs-item plain">
+          <div class="cs-item-title">Foreign Aid <span class="cs-tag">+2 coins</span></div>
+          <div class="cs-item-desc">Take 2 coins. Anyone can block by claiming Duke.</div>
+        </div>
+        <div class="cs-item plain">
+          <div class="cs-item-title">Coup <span class="cs-tag">−7 coins</span></div>
+          <div class="cs-item-desc">Target loses an influence. Unblockable, unchallengeable. Mandatory at 10+ coins.</div>
+        </div>
+      </div>
+
+      <h4 class="cs-h">Characters <span class="cs-sub">(claim one — anyone can bluff any card)</span></h4>
+      <div class="cs-grid">
+        <div class="cs-item char-duke">
+          <div class="cs-item-title">♦ Duke</div>
+          <div class="cs-item-desc"><b>Tax:</b> +3 coins.<br><b>Blocks:</b> Foreign Aid.</div>
+        </div>
+        <div class="cs-item char-assassin">
+          <div class="cs-item-title">♠ Assassin</div>
+          <div class="cs-item-desc"><b>Assassinate:</b> pay 3 coins, target loses an influence. Blockable by Contessa.</div>
+        </div>
+        <div class="cs-item char-captain">
+          <div class="cs-item-title">♣ Captain</div>
+          <div class="cs-item-desc"><b>Steal:</b> take 2 coins from a target.<br><b>Blocks:</b> Stealing.</div>
+        </div>
+        <div class="cs-item char-ambassador">
+          <div class="cs-item-title">♥ Ambassador</div>
+          <div class="cs-item-desc"><b>Exchange:</b> draw 2 cards, return 2 to the deck.<br><b>Blocks:</b> Stealing.</div>
+        </div>
+        <div class="cs-item char-contessa">
+          <div class="cs-item-title">★ Contessa</div>
+          <div class="cs-item-desc"><b>Blocks:</b> Assassination. No action of her own.</div>
+        </div>
+      </div>
+
+      <h4 class="cs-h">Challenges &amp; Blocks</h4>
+      <div class="cs-rules">
+        <p><b>Challenge:</b> call someone's bluff on a claimed character. If they have it, you lose an influence (they reveal, shuffle it back, and draw a new card). If they don't, they lose an influence and the action fails.</p>
+        <p><b>Block:</b> stop an action by claiming a character that counters it. A block can itself be challenged — if the blocker can't prove it, the original action goes through.</p>
+        <p><b>Losing influence:</b> reveal one of your face-down cards, face up, forever. Lose your last one and you're eliminated. Last player standing wins.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
