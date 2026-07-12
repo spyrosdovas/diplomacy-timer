@@ -64,6 +64,18 @@ app.get('/qr', async (req, res) => {
 // socket.id -> { code, playerId }
 const sessions = new Map();
 
+// A reconnect gets a brand-new socket.id; the old one's session entry would
+// otherwise sit around forever, and if that stale socket later fires its own
+// delayed 'disconnect' it would incorrectly mark the (now reconnected) player
+// as disconnected again. Clear out any other entries for the same player.
+function forgetStaleSessions(code, playerId, exceptSocketId) {
+  for (const [sid, s] of sessions.entries()) {
+    if (sid !== exceptSocketId && s.code === code && s.playerId === playerId) {
+      sessions.delete(sid);
+    }
+  }
+}
+
 function broadcast(game) {
   for (const p of game.players) {
     if (p.connected && p.socketId) {
@@ -111,6 +123,7 @@ io.on('connection', (socket) => {
       const game = getRoom(code);
       if (!game) throw new Error('Room not found.');
       game.reconnect(playerId, token, socket.id);
+      forgetStaleSessions(game.code, playerId, socket.id);
       sessions.set(socket.id, { code: game.code, playerId });
       socket.join(game.code);
       ack && ack({ ok: true, code: game.code, playerId, token });
@@ -225,13 +238,18 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const sess = sessions.get(socket.id);
     if (!sess) return;
+    sessions.delete(socket.id);
     const game = getRoom(sess.code);
     if (game) {
+      const player = game.getPlayer(sess.playerId);
+      // If the player already reconnected via a newer socket by the time this
+      // (possibly delayed) disconnect event arrives, don't clobber their
+      // current connected state -- it's stale.
+      if (player && player.socketId !== socket.id) return;
       game.removePlayer(sess.playerId);
       broadcast(game);
       if (game.players.length === 0) removeRoom(game.code);
     }
-    sessions.delete(socket.id);
   });
 });
 
