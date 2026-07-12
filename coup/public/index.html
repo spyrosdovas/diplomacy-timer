@@ -108,7 +108,7 @@
       <span class="room-pill" id="round-pill"></span>
       <button type="button" class="room-pill" id="game-code" title="Room code &amp; rejoin info"></button>
       <span class="deck-pill" id="deck-count">🂠 0</span>
-      <span class="log-pill" id="log-mode-pill"></span>
+      <button type="button" class="log-pill" id="log-mode-pill" title="Game mode info"></button>
     </div>
     <div class="topbar-right">
       <button id="btn-leaderboard-game" class="icon-btn labeled" title="Leaderboard">🏆 Leaderboard</button>
@@ -154,6 +154,17 @@
       <div class="qr-card"><img id="rejoin-qr-img" alt="Scan to rejoin this room" width="180" height="180"></div>
     </div>
     <button id="btn-copy-link-game" class="btn btn-ghost btn-block">🔗 Copy Invite Link</button>
+  </div>
+</div>
+
+<!-- GAME MODE INFO MODAL -->
+<div id="modal-gamemode" class="modal hidden">
+  <div class="modal-card">
+    <div class="cheatsheet-header">
+      <h2 id="gamemode-title">Game Mode</h2>
+      <button class="icon-btn" data-close-modal="modal-gamemode">✕</button>
+    </div>
+    <p id="gamemode-desc" class="hint"></p>
   </div>
 </div>
 

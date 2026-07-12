@@ -11,12 +11,16 @@
 
   const LOG_MODE_COPY = {
     full: {
+      title: '🌐 Remote Game',
       badge: '🌐 Remote',
       lobby: '🌐 Remote Game — full log stays visible all game.',
+      desc: 'Full history, always visible.',
     },
     off: {
+      title: '🪑 Tabletop Game',
       badge: '🪑 Tabletop',
       lobby: '🪑 Tabletop Game — claims fade after the next turn. Revealed cards & eliminations always stick. Full log returns at game end.',
+      desc: 'Short memory, like a real table — claims fade after one turn. Revealed cards and eliminations always stick.',
     },
   };
 
@@ -187,6 +191,14 @@
     $('#rejoin-code').textContent = lastState.code;
     $('#rejoin-qr-img').src = `/qr?text=${encodeURIComponent(inviteUrl(lastState.code))}`;
     openModal('#modal-rejoin');
+  });
+
+  $('#log-mode-pill').addEventListener('click', () => {
+    if (!lastState) return;
+    const copy = LOG_MODE_COPY[lastState.logMode === 'off' ? 'off' : 'full'];
+    $('#gamemode-title').textContent = copy.title;
+    $('#gamemode-desc').textContent = copy.desc;
+    openModal('#modal-gamemode');
   });
   $('#btn-copy-link-game').addEventListener('click', () => copyInviteLink(lastState ? lastState.code : ''));
 
@@ -472,7 +484,6 @@
     pill.title = logModeText(state);
 
     const me = state.players.find((p) => p.id === state.you);
-    const others = state.players.filter((p) => p.id !== state.you);
 
     if (state.logMode === 'off') {
       $('#opponents-row').classList.add('hidden');
@@ -483,7 +494,7 @@
       $('#seat-circle').classList.add('hidden');
       $('#seat-circle').innerHTML = '';
       $('#opponents-row').classList.remove('hidden');
-      $('#opponents-row').innerHTML = others.map((p) => renderOpponentCard(p, state)).join('');
+      $('#opponents-row').innerHTML = state.players.map((p) => renderOpponentCard(p, state)).join('');
     }
 
     const log = $('#game-log');
@@ -507,11 +518,12 @@
 
   function renderOpponentCard(p, state) {
     const isTurn = state.turnPlayerId === p.id;
+    const isMe = p.id === state.you;
     const pips = renderPips(p.influences);
     return `
-      <div class="opp-card ${isTurn ? 'is-turn' : ''} ${p.alive ? '' : 'is-dead'}">
+      <div class="opp-card ${isTurn ? 'is-turn' : ''} ${p.alive ? '' : 'is-dead'} ${isMe ? 'is-me' : ''}">
         ${!p.connected ? '<span class="opp-disconnected">⚠️</span>' : ''}
-        <div class="opp-name">${escapeHtml(p.name)}</div>
+        <div class="opp-name">${escapeHtml(isMe ? 'You' : p.name)}</div>
         <div class="opp-coins">🪙 ${p.coins}</div>
         <div class="opp-influences">${pips}</div>
       </div>
