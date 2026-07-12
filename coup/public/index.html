@@ -106,7 +106,7 @@
   <header class="topbar">
     <div class="topbar-left">
       <span class="room-pill" id="round-pill"></span>
-      <span class="room-pill" id="game-code"></span>
+      <button type="button" class="room-pill" id="game-code" title="Room code &amp; rejoin info"></button>
       <span class="deck-pill" id="deck-count">🂠 0</span>
       <span class="log-pill" id="log-mode-pill"></span>
     </div>
@@ -139,6 +139,22 @@
     <h3 id="target-title">Choose a target</h3>
     <div id="target-list" class="target-list"></div>
     <button class="btn btn-text btn-block" data-close-modal="modal-target">Cancel</button>
+  </div>
+</div>
+
+<!-- ROOM CODE / RECONNECT MODAL -->
+<div id="modal-rejoin" class="modal hidden">
+  <div class="modal-card">
+    <div class="cheatsheet-header">
+      <h2>Room Code</h2>
+      <button class="icon-btn" data-close-modal="modal-rejoin">✕</button>
+    </div>
+    <p class="hint center">If you or a friend gets disconnected, scan this or use the link to jump right back into your seat.</p>
+    <p class="code-big center" id="rejoin-code"></p>
+    <div class="qr-block">
+      <div class="qr-card"><img id="rejoin-qr-img" alt="Scan to rejoin this room" width="180" height="180"></div>
+    </div>
+    <button id="btn-copy-link-game" class="btn btn-ghost btn-block">🔗 Copy Invite Link</button>
   </div>
 </div>
 

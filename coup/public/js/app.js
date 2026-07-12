@@ -162,15 +162,17 @@
     return `${location.origin}${location.pathname}?code=${code}`;
   }
 
-  $('#btn-copy-link').addEventListener('click', async () => {
-    const url = inviteUrl($('#lobby-code').textContent);
+  async function copyInviteLink(code) {
+    const url = inviteUrl(code);
     try {
       await navigator.clipboard.writeText(url);
       showToast('Invite link copied!');
     } catch (e) {
       prompt('Copy this link:', url);
     }
-  });
+  }
+
+  $('#btn-copy-link').addEventListener('click', () => copyInviteLink($('#lobby-code').textContent));
 
   $('#btn-leaderboard-game').addEventListener('click', () => {
     if (!lastState) return;
@@ -179,6 +181,14 @@
     $('#leaderboard-rows').innerHTML = renderLeaderboardRows(lastState);
     openModal('#modal-leaderboard');
   });
+
+  $('#game-code').addEventListener('click', () => {
+    if (!lastState) return;
+    $('#rejoin-code').textContent = lastState.code;
+    $('#rejoin-qr-img').src = `/qr?text=${encodeURIComponent(inviteUrl(lastState.code))}`;
+    openModal('#modal-rejoin');
+  });
+  $('#btn-copy-link-game').addEventListener('click', () => copyInviteLink(lastState ? lastState.code : ''));
 
   // ---------- Socket lifecycle ----------
   socket.on('connect', () => {

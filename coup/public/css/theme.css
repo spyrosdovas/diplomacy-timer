@@ -213,6 +213,7 @@ button { font-family: var(--font-body); }
 
 .hint { color: var(--ink-faint); font-size: 12.5px; line-height: 1.5; margin: 4px 0; }
 .hint.center { text-align: center; }
+.center { text-align: center; }
 
 /* ---------- Topbar (lobby + game) ---------- */
 .topbar {
@@ -514,6 +515,8 @@ button { font-family: var(--font-body); }
 .modal {
   position: fixed; inset: 0;
   background: rgba(6, 4, 5, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   display: flex; align-items: flex-end;
   justify-content: center;
   z-index: 50;
