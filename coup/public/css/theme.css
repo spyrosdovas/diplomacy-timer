@@ -550,7 +550,23 @@ button { font-family: var(--font-body); }
 
 .gameover-card { text-align: center; }
 .crown { font-size: 48px; color: var(--gold-bright); text-shadow: 0 0 20px rgba(212,175,55,0.6); }
-#gameover-sub { color: var(--ink-dim); margin-bottom: 18px; }
+#roundend-title { margin-bottom: 14px; }
+
+.lb-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 18px; text-align: left; }
+.lb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 14px;
+  gap: 10px;
+}
+.lb-name { font-weight: 600; font-size: 14px; }
+.lb-crowns { color: var(--gold-bright); font-size: 15px; letter-spacing: 1px; white-space: nowrap; }
+
+.roundend-buttons { display: flex; flex-direction: column; gap: 8px; }
 
 .cheatsheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .cheatsheet-scroll { display: flex; flex-direction: column; gap: 6px; }

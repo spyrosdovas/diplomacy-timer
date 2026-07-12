@@ -32,6 +32,14 @@
         <label class="field-label">Your Name</label>
         <input id="create-name" class="text-input" maxlength="16" placeholder="e.g. Vito" autocomplete="off">
 
+        <label class="field-label">Play To</label>
+        <div class="tabs" id="victory-select">
+          <button type="button" class="tab-btn" data-victory="1">1 Win</button>
+          <button type="button" class="tab-btn" data-victory="2">2 Wins</button>
+          <button type="button" class="tab-btn" data-victory="3">3 Wins</button>
+        </div>
+        <p class="hint">Play rounds until someone reaches this many round wins.</p>
+
         <label class="field-label">Log Style</label>
         <div class="mode-select" id="logmode-select">
           <button type="button" class="mode-card selected" data-mode="full">
@@ -80,6 +88,7 @@
       <p class="hint center">Scan to join instantly</p>
     </div>
 
+    <div id="lobby-victory" class="logmode-banner"></div>
     <div id="lobby-logmode" class="logmode-banner"></div>
 
     <h3 class="section-title">Players (<span id="lobby-count">0</span>/6)</h3>
@@ -96,11 +105,13 @@
 <section id="screen-game" class="screen hidden">
   <header class="topbar">
     <div class="topbar-left">
+      <span class="room-pill" id="round-pill"></span>
       <span class="room-pill" id="game-code"></span>
       <span class="deck-pill" id="deck-count">🂠 0</span>
       <span class="log-pill" id="log-mode-pill"></span>
     </div>
     <div class="topbar-right">
+      <button id="btn-leaderboard-game" class="icon-btn labeled" title="Leaderboard">🏆 Leaderboard</button>
       <button id="btn-cheatsheet-game" class="icon-btn labeled" title="Cheat Sheet">📜 Cheat Sheet</button>
       <button id="btn-leave-game" class="icon-btn" title="Leave">✕</button>
     </div>
@@ -131,13 +142,25 @@
   </div>
 </div>
 
-<!-- GAME OVER MODAL -->
-<div id="modal-gameover" class="modal hidden">
+<!-- ROUND END / MATCH END MODAL -->
+<div id="modal-roundend" class="modal hidden">
   <div class="modal-card gameover-card">
     <div class="crown">♛</div>
-    <h2 id="gameover-title">Game Over</h2>
-    <p id="gameover-sub"></p>
-    <button id="btn-play-again" class="btn btn-primary btn-block">Return to Home</button>
+    <h2 id="roundend-title">Round Over</h2>
+    <div id="roundend-leaderboard" class="lb-list"></div>
+    <div id="roundend-buttons" class="roundend-buttons"></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD MODAL (available any time during play) -->
+<div id="modal-leaderboard" class="modal hidden">
+  <div class="modal-card">
+    <div class="cheatsheet-header">
+      <h2>Leaderboard</h2>
+      <button class="icon-btn" data-close-modal="modal-leaderboard">✕</button>
+    </div>
+    <p id="leaderboard-hint" class="hint"></p>
+    <div id="leaderboard-rows" class="lb-list"></div>
   </div>
 </div>
 

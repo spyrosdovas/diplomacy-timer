@@ -45,9 +45,9 @@ function safe(socket, fn) {
 }
 
 io.on('connection', (socket) => {
-  socket.on('createRoom', ({ name, fullLog }, ack) => {
+  socket.on('createRoom', ({ name, fullLog, victoryTarget }, ack) => {
     safe(socket, () => {
-      const game = createRoom({ fullLog: fullLog !== false });
+      const game = createRoom({ fullLog: fullLog !== false, victoryTarget });
       const player = game.addPlayer(name, socket.id);
       sessions.set(socket.id, { code: game.code, playerId: player.id });
       socket.join(game.code);
@@ -88,6 +88,28 @@ io.on('connection', (socket) => {
       if (!game) throw new Error('Room not found.');
       game.startGame(sess.playerId);
       ack && ack({ ok: true });
+      broadcast(game);
+    });
+  });
+
+  socket.on('readyForRound', () => {
+    safe(socket, () => {
+      const sess = sessions.get(socket.id);
+      if (!sess) throw new Error('Not in a room.');
+      const game = getRoom(sess.code);
+      if (!game) throw new Error('Room not found.');
+      game.readyUp(sess.playerId);
+      broadcast(game);
+    });
+  });
+
+  socket.on('endGame', () => {
+    safe(socket, () => {
+      const sess = sessions.get(socket.id);
+      if (!sess) throw new Error('Not in a room.');
+      const game = getRoom(sess.code);
+      if (!game) throw new Error('Room not found.');
+      game.endGame(sess.playerId);
       broadcast(game);
     });
   });

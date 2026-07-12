@@ -14,10 +14,12 @@ function generateCode() {
   return code;
 }
 
-function createRoom({ fullLog = true } = {}) {
+function createRoom({ fullLog = true, victoryTarget = 1 } = {}) {
   const code = generateCode();
   const game = new Game(code);
   game.logMode = fullLog ? 'full' : 'off';
+  const parsed = parseInt(victoryTarget, 10);
+  game.victoryTarget = Number.isFinite(parsed) ? Math.min(3, Math.max(1, parsed)) : 1;
   rooms.set(code, game);
   return game;
 }

@@ -52,7 +52,7 @@ class Game {
     this.code = code;
     this.players = [];
     this.deck = [];
-    this.phase = 'lobby'; // lobby | playing | gameover
+    this.phase = 'lobby'; // lobby | playing | roundover | gameover
     this.turnIndex = 0;
     this.hostId = null;
     this.pending = null;
@@ -63,6 +63,10 @@ class Game {
     this.createdAt = Date.now();
     this.logMode = 'full'; // 'full' | 'off' — set once at room creation, host-only
     this.turnNumber = 0;
+    this.victoryTarget = 1; // round wins needed to take the match (1-3), set at creation
+    this.roundNumber = 0;
+    this.lastRoundWinnerId = null;
+    this.readyForNextRound = new Set();
   }
 
   // permanent entries (revealed cards, eliminations, connection/game milestones) always
@@ -74,7 +78,7 @@ class Game {
   }
 
   getVisibleLog() {
-    if (this.logMode !== 'off' || this.phase === 'gameover') {
+    if (this.logMode !== 'off' || this.phase === 'gameover' || this.phase === 'roundover') {
       return this.log.map((e) => e.text);
     }
     return this.log
@@ -109,6 +113,7 @@ class Game {
       influences: [],
       connected: true,
       socketId,
+      roundWins: 0,
     };
     this.players.push(player);
     if (!this.hostId) this.hostId = player.id;
@@ -162,6 +167,19 @@ class Game {
     if (this.phase !== 'lobby') throw new Error('Game already started.');
     if (this.players.length < MIN_PLAYERS) throw new Error(`Need at least ${MIN_PLAYERS} players.`);
 
+    this.roundNumber = 1;
+    this._dealRound();
+    this.phase = 'playing';
+    this.turnIndex = 0;
+    this.pushLog(
+      `Round 1 begins${this.victoryTarget > 1 ? ` — first to ${this.victoryTarget} round wins takes the match` : ''}. Cards are dealt — 2 coins and 2 influence each.`,
+      { permanent: true }
+    );
+    this.pushLog(`${this.players[0].name} goes first.`, { permanent: true });
+    return true;
+  }
+
+  _dealRound() {
     this.deck = buildDeck();
     for (const p of this.players) {
       p.coins = 2;
@@ -170,12 +188,6 @@ class Game {
         { card: this.deck.pop(), revealed: false },
       ];
     }
-    this.phase = 'playing';
-    this.turnIndex = 0;
-    this.turnNumber = 1;
-    this.pushLog('The game has started. Cards are dealt — 2 coins and 2 influence each.', { permanent: true });
-    this.pushLog(`${this.players[0].name} goes first.`, { permanent: true });
-    return true;
   }
 
   currentPlayer() {
@@ -186,9 +198,7 @@ class Game {
     if (this.phase !== 'playing') return;
     const alive = this.players.filter((p) => this.isAlive(p));
     if (alive.length <= 1) {
-      this.phase = 'gameover';
-      this.winnerId = alive[0] ? alive[0].id : null;
-      this.pushLog(alive[0] ? `${alive[0].name} wins the game!` : 'Game over.', { permanent: true });
+      this._concludeRound(alive[0] || null);
       return;
     }
     let attempts = 0;
@@ -198,6 +208,67 @@ class Game {
     } while (!this.isAlive(this.players[this.turnIndex]) && attempts <= this.players.length);
     this.turnNumber += 1;
     this.pushLog(`It's ${this.currentPlayer().name}'s turn.`);
+  }
+
+  _concludeRound(winner) {
+    this.lastRoundWinnerId = winner ? winner.id : null;
+    if (winner) {
+      winner.roundWins += 1;
+    }
+    if (winner && winner.roundWins >= this.victoryTarget) {
+      this.phase = 'gameover';
+      this.winnerId = winner.id;
+      this.pushLog(`${winner.name} wins Round ${this.roundNumber} and the match!`, { permanent: true });
+      return;
+    }
+    this.phase = 'roundover';
+    this.readyForNextRound = new Set();
+    this.pushLog(
+      winner ? `${winner.name} wins Round ${this.roundNumber}! (${winner.roundWins}/${this.victoryTarget} to win the match)` : `Round ${this.roundNumber} ended.`,
+      { permanent: true }
+    );
+  }
+
+  // Host-only: every connected player must ready up before the next round deals.
+  // Disconnected players are excluded from the gate so a dropped connection can't
+  // stall the match forever.
+  readyUp(playerId) {
+    if (this.phase !== 'roundover') throw new Error('No round transition is pending.');
+    const player = this.getPlayer(playerId);
+    if (!player) throw new Error('Unknown player.');
+    this.readyForNextRound.add(playerId);
+    const relevant = this.players.filter((p) => p.connected);
+    const allReady = relevant.length > 0 && relevant.every((p) => this.readyForNextRound.has(p.id));
+    if (allReady) this._startNextRound();
+  }
+
+  _startNextRound() {
+    this.roundNumber += 1;
+    this._dealRound();
+    // Rotate who starts, cycling through the same seating order each round.
+    this.turnIndex = (this.roundNumber - 1) % this.players.length;
+    this.phase = 'playing';
+    this.readyForNextRound = new Set();
+    this.pending = null;
+    this.pendingLoseInfluence = null;
+    this.pendingExchange = null;
+    this.pushLog(`Round ${this.roundNumber} begins! Cards are dealt — 2 coins and 2 influence each.`, { permanent: true });
+    this.pushLog(`${this.currentPlayer().name} goes first.`, { permanent: true });
+  }
+
+  endGame(requesterId) {
+    if (requesterId !== this.hostId) throw new Error('Only the host can end the game.');
+    if (this.phase !== 'roundover') throw new Error('The game can only be ended between rounds.');
+    const maxWins = Math.max(0, ...this.players.map((p) => p.roundWins));
+    const leaders = maxWins > 0 ? this.players.filter((p) => p.roundWins === maxWins) : [];
+    this.winnerId = leaders.length === 1 ? leaders[0].id : null;
+    this.phase = 'gameover';
+    this.pushLog(
+      this.winnerId
+        ? `${this.getPlayer(this.winnerId).name} ends the game in the lead!`
+        : 'The host ended the game.',
+      { permanent: true }
+    );
   }
 
   requestLoseInfluence(playerId, callback) {
@@ -494,6 +565,7 @@ class Game {
       connected: p.connected,
       isHost: p.id === this.hostId,
       alive: this.isAlive(p),
+      roundWins: p.roundWins,
       influences: p.influences.map((c) => {
         if (c.revealed) return { card: c.card, revealed: true };
         if (p.id === viewerId) return { card: c.card, revealed: false };
@@ -584,6 +656,10 @@ class Game {
       exchange: exchangeView,
       winnerId: this.winnerId,
       actions: ACTIONS,
+      roundNumber: this.roundNumber,
+      victoryTarget: this.victoryTarget,
+      roundWinnerId: this.lastRoundWinnerId,
+      readyPlayerIds: this.phase === 'roundover' ? [...this.readyForNextRound] : [],
     };
   }
 }

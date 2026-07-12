@@ -76,9 +76,9 @@
   });
 
   // ---------- Home screen ----------
-  $$('.tab-btn').forEach((btn) => {
+  $$('.tab-btn[data-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      $$('.tab-btn').forEach((b) => b.classList.remove('active'));
+      $$('.tab-btn[data-tab]').forEach((b) => b.classList.remove('active'));
       $$('.tab-panel').forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
       $('#tab-' + btn.dataset.tab).classList.add('active');
@@ -93,11 +93,20 @@
     });
   });
 
+  let selectedVictoryTarget = 1;
+  $$('#victory-select .tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.victory) === selectedVictoryTarget);
+    btn.addEventListener('click', () => {
+      selectedVictoryTarget = Number(btn.dataset.victory);
+      $$('#victory-select .tab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    });
+  });
+
   $('#btn-create').addEventListener('click', () => {
     const name = $('#create-name').value.trim();
     if (!name) return showToast('Enter your name first.');
     const fullLog = selectedLogMode !== 'off';
-    socket.emit('createRoom', { name, fullLog }, (res) => {
+    socket.emit('createRoom', { name, fullLog, victoryTarget: selectedVictoryTarget }, (res) => {
       if (!res || !res.ok) return showToast((res && res.error) || 'Could not create room.');
       saveSession({ code: res.code, playerId: res.playerId, token: res.token });
     });
@@ -118,7 +127,7 @@
   const params = new URLSearchParams(location.search);
   if (params.get('code')) {
     $('#join-code').value = params.get('code').toUpperCase();
-    $$('.tab-btn').forEach((b) => b.classList.remove('active'));
+    $$('.tab-btn[data-tab]').forEach((b) => b.classList.remove('active'));
     $$('.tab-panel').forEach((p) => p.classList.remove('active'));
     $('.tab-btn[data-tab="join"]').classList.add('active');
     $('#tab-join').classList.add('active');
@@ -145,6 +154,7 @@
     socket.emit('leaveRoom');
     clearSession();
     lastState = null;
+    $$('.modal').forEach((m) => m.classList.add('hidden'));
     showScreen('#screen-home');
   }
 
@@ -162,9 +172,12 @@
     }
   });
 
-  $('#btn-play-again').addEventListener('click', () => {
-    closeModal('#modal-gameover');
-    leaveRoom();
+  $('#btn-leaderboard-game').addEventListener('click', () => {
+    if (!lastState) return;
+    const target = lastState.victoryTarget;
+    $('#leaderboard-hint').textContent = `Round ${lastState.roundNumber} — first to ${target} round win${target > 1 ? 's' : ''} takes the match.`;
+    $('#leaderboard-rows').innerHTML = renderLeaderboardRows(lastState);
+    openModal('#modal-leaderboard');
   });
 
   // ---------- Socket lifecycle ----------
@@ -195,14 +208,67 @@
     }
     showScreen('#screen-game');
     renderGame(state);
-    if (state.phase === 'gameover') {
-      const me = state.players.find((p) => p.id === state.you);
-      const winner = state.players.find((p) => p.id === state.winnerId);
-      $('#gameover-title').textContent = winner ? `${winner.name} Wins!` : 'Game Over';
-      $('#gameover-sub').textContent = winner && winner.id === state.you
-        ? 'You out-bluffed the whole table.'
-        : (winner ? `${winner.name} was the last influence standing.` : '');
-      openModal('#modal-gameover');
+    if (state.phase === 'roundover' || state.phase === 'gameover') {
+      renderRoundEndModal(state);
+    } else {
+      closeModal('#modal-roundend');
+    }
+  }
+
+  function renderLeaderboardRows(state) {
+    const sorted = [...state.players].sort((a, b) => b.roundWins - a.roundWins);
+    return sorted.map((p) => `
+      <div class="lb-row">
+        <span class="lb-name">${escapeHtml(p.name)}
+          ${p.id === state.hostId ? '<span class="host-badge">HOST</span>' : ''}
+          ${p.id === state.you ? '<span class="you-badge">YOU</span>' : ''}
+        </span>
+        <span class="lb-crowns">${p.roundWins > 0 ? '👑'.repeat(p.roundWins) : '—'}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderRoundEndModal(state) {
+    const isMatchOver = state.phase === 'gameover';
+    const winner = state.players.find((p) => p.id === (isMatchOver ? state.winnerId : state.roundWinnerId));
+    const isHost = state.hostId === state.you;
+
+    $('#roundend-title').textContent = isMatchOver
+      ? (winner ? `${winner.name} Wins the Game!` : 'Game Ended')
+      : (winner ? `${winner.name} wins Round ${state.roundNumber}!` : `Round ${state.roundNumber} ended`);
+
+    $('#roundend-leaderboard').innerHTML = renderLeaderboardRows(state);
+    openModal('#modal-roundend');
+
+    const btnZone = $('#roundend-buttons');
+    if (isMatchOver) {
+      btnZone.innerHTML = `<button id="btn-roundend-leave" class="btn btn-primary btn-block">Leave</button>`;
+      $('#btn-roundend-leave').addEventListener('click', () => leaveRoom());
+      return;
+    }
+
+    const iAmReady = state.readyPlayerIds.includes(state.you);
+    const waitingNames = state.players.filter((p) => p.connected && !state.readyPlayerIds.includes(p.id)).map((p) => p.name);
+    btnZone.innerHTML = `
+      <button id="btn-ready-round" class="btn btn-primary btn-block" ${iAmReady ? 'disabled' : ''}>
+        ${iAmReady ? 'Waiting for others…' : 'Ready for Next Round'}
+      </button>
+      ${waitingNames.length ? `<p class="hint center">Waiting on: ${waitingNames.map(escapeHtml).join(', ')}</p>` : ''}
+      <button id="btn-roundend-leave" class="btn btn-text btn-block">Leave</button>
+      ${isHost ? '<button id="btn-endgame" class="btn btn-text btn-block">End Game</button>' : ''}
+    `;
+
+    if (!iAmReady) {
+      $('#btn-ready-round').addEventListener('click', () => socket.emit('readyForRound'));
+    }
+    $('#btn-roundend-leave').addEventListener('click', () => {
+      if (confirm('Leave this game?')) leaveRoom();
+    });
+    const endGameBtn = $('#btn-endgame');
+    if (endGameBtn) {
+      endGameBtn.addEventListener('click', () => {
+        if (confirm('End the game for everyone? This cannot be undone.')) socket.emit('endGame');
+      });
     }
   }
 
@@ -213,6 +279,7 @@
   function renderLobby(state) {
     $('#lobby-code').textContent = state.code;
     $('#lobby-count').textContent = state.players.length;
+    $('#lobby-victory').textContent = `🏆 First to ${state.victoryTarget} round win${state.victoryTarget > 1 ? 's' : ''} takes the match.`;
     $('#lobby-logmode').textContent = logModeText(state);
     const isHost = state.hostId === state.you;
     const list = $('#lobby-players');
@@ -351,6 +418,7 @@
   }
 
   function renderGame(state) {
+    $('#round-pill').textContent = `Round ${state.roundNumber}`;
     $('#game-code').textContent = state.code;
     $('#deck-count').textContent = `🂠 ${state.deckCount}`;
     const pill = $('#log-mode-pill');
@@ -445,7 +513,7 @@
 
   function renderActionZone(state, me) {
     const zone = $('#action-zone');
-    if (state.phase === 'gameover') { zone.innerHTML = ''; return; }
+    if (state.phase === 'gameover' || state.phase === 'roundover') { zone.innerHTML = ''; return; }
     if (!me) { zone.innerHTML = ''; return; }
 
     // 1. I must choose a card to lose
