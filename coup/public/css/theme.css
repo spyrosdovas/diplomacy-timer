@@ -219,6 +219,8 @@ button { font-family: var(--font-body); }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 8px;
   padding: 12px 16px;
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-soft);
@@ -235,6 +237,18 @@ button { font-family: var(--font-body); }
   border-radius: 10px;
   font-size: 16px;
   cursor: pointer;
+}
+.icon-btn.labeled {
+  width: auto;
+  height: 38px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  white-space: nowrap;
 }
 .room-pill, .deck-pill {
   background: rgba(212, 175, 55, 0.1);
@@ -360,6 +374,7 @@ button { font-family: var(--font-body); }
   font-size: 13px;
 }
 .pip.facedown { background: repeating-linear-gradient(135deg, #2a2226, #2a2226 4px, #221b1d 4px, #221b1d 8px); }
+.pip.revealed { color: #fff; font-weight: 700; }
 .opp-disconnected { position: absolute; top: 4px; right: 6px; font-size: 10px; color: var(--ink-faint); }
 
 /* Tabletop mode: circular seating layout, first-to-act at the bottom, clockwise */
@@ -493,6 +508,7 @@ button { font-family: var(--font-body); }
   font-size: 13px;
   color: #fff;
 }
+.me-card.revealed { opacity: 0.45; text-decoration: line-through; }
 
 /* ---------- Modals ---------- */
 .modal {

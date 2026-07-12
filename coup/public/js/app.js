@@ -381,9 +381,19 @@
     renderMe(state, me);
   }
 
+  function renderPips(influences) {
+    return influences.map((c) => {
+      if (c.revealed) {
+        const meta = CHAR_META[c.card] || {};
+        return `<div class="pip revealed ${meta.cls || ''}" title="${c.card}">${meta.symbol || ''}</div>`;
+      }
+      return `<div class="pip facedown"></div>`;
+    }).join('');
+  }
+
   function renderOpponentCard(p, state) {
     const isTurn = state.turnPlayerId === p.id;
-    const pips = p.influences.filter((c) => !c.revealed).map(() => `<div class="pip facedown"></div>`).join('');
+    const pips = renderPips(p.influences);
     return `
       <div class="opp-card ${isTurn ? 'is-turn' : ''} ${p.alive ? '' : 'is-dead'}">
         ${!p.connected ? '<span class="opp-disconnected">⚠️</span>' : ''}
@@ -409,7 +419,7 @@
       const dy = (radiusPct * Math.cos(rad)).toFixed(1);
       const isTurn = state.turnPlayerId === p.id;
       const isMe = p.id === state.you;
-      const pips = p.influences.filter((c) => !c.revealed).map(() => `<div class="pip facedown"></div>`).join('');
+      const pips = renderPips(p.influences);
       return `
         <div class="seat-node ${isTurn ? 'is-turn' : ''} ${p.alive ? '' : 'is-dead'} ${isMe ? 'is-me' : ''}"
              style="left: calc(50% + ${dx}%); top: calc(50% + ${dy}%);">
@@ -426,9 +436,10 @@
     if (!me) return;
     $('#me-name').textContent = me.name + (state.turnPlayerId === me.id ? ' (your turn)' : '');
     $('#me-coins').textContent = `🪙 ${me.coins}`;
-    $('#me-cards').innerHTML = me.influences.filter((c) => !c.revealed).map((c) => {
+    $('#me-cards').innerHTML = me.influences.map((c) => {
       const meta = CHAR_META[c.card] || {};
-      return `<div class="me-card ${meta.cls || ''}">${c.card || '?'}</div>`;
+      const label = c.card ? `${meta.symbol ? meta.symbol + ' ' : ''}${c.card}` : '?';
+      return `<div class="me-card ${meta.cls || ''} ${c.revealed ? 'revealed' : ''}">${label}</div>`;
     }).join('');
   }
 
