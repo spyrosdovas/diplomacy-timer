@@ -134,37 +134,37 @@ button { font-family: var(--font-body); }
 .text-input:focus { border-color: var(--gold); }
 .code-input { text-transform: uppercase; letter-spacing: 0.3em; text-align: center; font-family: var(--font-display); font-size: 22px; }
 
-.toggle-row {
+.mode-select {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
   background: rgba(0,0,0,0.25);
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 12px;
-  margin-top: 4px;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  opacity: 0.65;
+  transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
-.toggle-text { display: flex; flex-direction: column; gap: 3px; flex: 1; }
-.toggle-label { font-weight: 700; font-size: 13.5px; color: var(--ink); }
-.toggle-hint { font-size: 11px; color: var(--ink-faint); line-height: 1.4; }
-.switch { position: relative; width: 44px; height: 26px; flex: 0 0 auto; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.switch .slider {
-  position: absolute; inset: 0; cursor: pointer;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  transition: background 0.15s ease;
+.mode-card:active { transform: scale(0.99); }
+.mode-card.selected {
+  opacity: 1;
+  border-color: var(--gold);
+  background: rgba(212, 175, 55, 0.08);
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.25);
 }
-.switch .slider::before {
-  content: ""; position: absolute;
-  height: 18px; width: 18px; left: 3px; top: 2px;
-  background: var(--ink-faint);
-  border-radius: 50%;
-  transition: transform 0.15s ease, background 0.15s ease;
-}
-.switch input:checked + .slider { background: rgba(140, 31, 43, 0.55); border-color: var(--crimson-bright); }
-.switch input:checked + .slider::before { transform: translateX(18px); background: var(--gold-bright); }
+.mode-card-title { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.mode-card.selected .mode-card-title { color: var(--gold-bright); }
+.mode-card-desc { font-size: 11px; color: var(--ink-faint); line-height: 1.4; }
 
 .logmode-banner {
   font-size: 12.5px;

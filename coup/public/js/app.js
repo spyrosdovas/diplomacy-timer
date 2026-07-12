@@ -11,14 +11,10 @@
 
   const LOG_MODE_COPY = {
     full: {
-      label: 'Remote Game',
-      hint: 'Full history, always visible.',
       badge: '🌐 Remote',
       lobby: '🌐 Remote Game — full log stays visible all game.',
     },
     off: {
-      label: 'Tabletop Game',
-      hint: 'Short memory, like a real table — claims fade after one turn. Revealed cards and eliminations always stick.',
       badge: '🪑 Tabletop',
       lobby: '🪑 Tabletop Game — claims fade after the next turn. Revealed cards & eliminations always stick. Full log returns at game end.',
     },
@@ -85,23 +81,23 @@
     });
   });
 
+  let selectedLogMode = 'full';
+  $$('#logmode-select .mode-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      selectedLogMode = card.dataset.mode;
+      $$('#logmode-select .mode-card').forEach((c) => c.classList.toggle('selected', c === card));
+    });
+  });
+
   $('#btn-create').addEventListener('click', () => {
     const name = $('#create-name').value.trim();
     if (!name) return showToast('Enter your name first.');
-    const fullLog = $('#create-fulllog').checked;
+    const fullLog = selectedLogMode !== 'off';
     socket.emit('createRoom', { name, fullLog }, (res) => {
       if (!res || !res.ok) return showToast((res && res.error) || 'Could not create room.');
       saveSession({ code: res.code, playerId: res.playerId, token: res.token });
     });
   });
-
-  function updateFullLogToggleText() {
-    const copy = LOG_MODE_COPY[$('#create-fulllog').checked ? 'full' : 'off'];
-    $('#fulllog-label').textContent = copy.label;
-    $('#fulllog-hint').textContent = copy.hint;
-  }
-  $('#create-fulllog').addEventListener('change', updateFullLogToggleText);
-  updateFullLogToggleText();
 
   $('#btn-join').addEventListener('click', () => {
     const code = $('#join-code').value.trim().toUpperCase();

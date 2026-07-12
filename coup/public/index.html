@@ -32,15 +32,16 @@
         <label class="field-label">Your Name</label>
         <input id="create-name" class="text-input" maxlength="16" placeholder="e.g. Vito" autocomplete="off">
 
-        <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label" id="fulllog-label">Remote Game</span>
-            <span class="toggle-hint" id="fulllog-hint">Full history, always visible.</span>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="create-fulllog" checked>
-            <span class="slider"></span>
-          </label>
+        <label class="field-label">Log Style</label>
+        <div class="mode-select" id="logmode-select">
+          <button type="button" class="mode-card selected" data-mode="full">
+            <span class="mode-card-title">🌐 Remote Game</span>
+            <span class="mode-card-desc">Full history, always visible.</span>
+          </button>
+          <button type="button" class="mode-card" data-mode="off">
+            <span class="mode-card-title">🪑 Tabletop Game</span>
+            <span class="mode-card-desc">Short memory, like a real table — claims fade after one turn. Revealed cards and eliminations always stick.</span>
+          </button>
         </div>
 
         <button id="btn-create" class="btn btn-primary btn-block">Create Room</button>
