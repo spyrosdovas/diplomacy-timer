@@ -14,9 +14,10 @@ function generateCode() {
   return code;
 }
 
-function createRoom() {
+function createRoom({ fullLog = true } = {}) {
   const code = generateCode();
   const game = new Game(code);
+  game.logMode = fullLog ? 'full' : 'off';
   rooms.set(code, game);
   return game;
 }

@@ -73,7 +73,8 @@
   $('#btn-create').addEventListener('click', () => {
     const name = $('#create-name').value.trim();
     if (!name) return showToast('Enter your name first.');
-    socket.emit('createRoom', { name }, (res) => {
+    const fullLog = $('#create-fulllog').checked;
+    socket.emit('createRoom', { name, fullLog }, (res) => {
       if (!res || !res.ok) return showToast((res && res.error) || 'Could not create room.');
       saveSession({ code: res.code, playerId: res.playerId, token: res.token });
     });
@@ -178,9 +179,16 @@
     }
   }
 
+  function logModeText(state) {
+    return state.logMode === 'off'
+      ? '🫥 Fading Log — claims and turn announcements disappear after the next player\'s turn. Revealed cards and eliminations always stay visible. Full log returns when the game ends.'
+      : '📜 Full Log Shown — every action stays in the log for the whole game.';
+  }
+
   function renderLobby(state) {
     $('#lobby-code').textContent = state.code;
     $('#lobby-count').textContent = state.players.length;
+    $('#lobby-logmode').textContent = logModeText(state);
     const isHost = state.hostId === state.you;
     $('#lobby-players').innerHTML = state.players.map((p) => `
       <li>
@@ -208,6 +216,9 @@
   function renderGame(state) {
     $('#game-code').textContent = state.code;
     $('#deck-count').textContent = `🂠 ${state.deckCount}`;
+    const pill = $('#log-mode-pill');
+    pill.textContent = state.logMode === 'off' ? '🫥 Fading Log' : '📜 Full Log';
+    pill.title = logModeText(state);
 
     const me = state.players.find((p) => p.id === state.you);
     const others = state.players.filter((p) => p.id !== state.you);

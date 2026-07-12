@@ -31,9 +31,9 @@ function safe(socket, fn) {
 }
 
 io.on('connection', (socket) => {
-  socket.on('createRoom', ({ name }, ack) => {
+  socket.on('createRoom', ({ name, fullLog }, ack) => {
     safe(socket, () => {
-      const game = createRoom();
+      const game = createRoom({ fullLog: fullLog !== false });
       const player = game.addPlayer(name, socket.id);
       sessions.set(socket.id, { code: game.code, playerId: player.id });
       socket.join(game.code);

@@ -31,6 +31,18 @@
       <div id="tab-create" class="tab-panel active">
         <label class="field-label">Your Name</label>
         <input id="create-name" class="text-input" maxlength="16" placeholder="e.g. Vito" autocomplete="off">
+
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Full Log Shown</span>
+            <span class="toggle-hint">On: every action stays in the log all game, like now. Off: claims and turn announcements fade from the log after the next player's turn — revealed cards and eliminations always stay visible. Either way, the full log reappears once the game ends.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="create-fulllog" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
         <button id="btn-create" class="btn btn-primary btn-block">Create Room</button>
         <p class="hint">You'll get a 4-letter code to share with friends.</p>
       </div>
@@ -62,6 +74,8 @@
     <p class="hint center">Share this code — friends join at this page on their phones.</p>
     <button id="btn-copy-link" class="btn btn-ghost btn-block">🔗 Copy Invite Link</button>
 
+    <div id="lobby-logmode" class="logmode-banner"></div>
+
     <h3 class="section-title">Players (<span id="lobby-count">0</span>/6)</h3>
     <ul id="lobby-players" class="player-list"></ul>
 
@@ -77,6 +91,7 @@
     <div class="topbar-left">
       <span class="room-pill" id="game-code"></span>
       <span class="deck-pill" id="deck-count">🂠 0</span>
+      <span class="log-pill" id="log-mode-pill"></span>
     </div>
     <div class="topbar-right">
       <button id="btn-cheatsheet-game" class="icon-btn" title="Cheat Sheet">📜</button>

@@ -61,11 +61,25 @@ class Game {
     this.log = [];
     this.winnerId = null;
     this.createdAt = Date.now();
+    this.logMode = 'full'; // 'full' | 'off' — set once at room creation, host-only
+    this.turnNumber = 0;
   }
 
-  pushLog(msg) {
-    this.log.push(msg);
-    if (this.log.length > 200) this.log.shift();
+  // permanent entries (revealed cards, eliminations, connection/game milestones) always
+  // stay visible. Everything else is a "claim" that only sticks around for the current
+  // and next player's turn when logMode is 'off', mirroring real-table memory.
+  pushLog(msg, { permanent = false } = {}) {
+    this.log.push({ text: msg, turn: this.turnNumber, permanent });
+    if (this.log.length > 300) this.log.shift();
+  }
+
+  getVisibleLog() {
+    if (this.logMode !== 'off' || this.phase === 'gameover') {
+      return this.log.map((e) => e.text);
+    }
+    return this.log
+      .filter((e) => e.permanent || this.turnNumber - e.turn <= 1)
+      .map((e) => e.text);
   }
 
   getPlayer(playerId) {
@@ -98,7 +112,7 @@ class Game {
     };
     this.players.push(player);
     if (!this.hostId) this.hostId = player.id;
-    this.pushLog(`${trimmed} joined the room.`);
+    this.pushLog(`${trimmed} joined the room.`, { permanent: true });
     return player;
   }
 
@@ -107,7 +121,7 @@ class Game {
     if (!player || player.token !== token) throw new Error('Could not rejoin that room.');
     player.connected = true;
     player.socketId = socketId;
-    this.pushLog(`${player.name} reconnected.`);
+    this.pushLog(`${player.name} reconnected.`, { permanent: true });
     return player;
   }
 
@@ -115,7 +129,7 @@ class Game {
     if (this.phase === 'lobby') {
       const p = this.getPlayer(playerId);
       this.players = this.players.filter((pl) => pl.id !== playerId);
-      if (p) this.pushLog(`${p.name} left the room.`);
+      if (p) this.pushLog(`${p.name} left the room.`, { permanent: true });
       if (this.hostId === playerId) {
         this.hostId = this.players[0] ? this.players[0].id : null;
       }
@@ -123,7 +137,7 @@ class Game {
       const p = this.getPlayer(playerId);
       if (p) {
         p.connected = false;
-        this.pushLog(`${p.name} disconnected.`);
+        this.pushLog(`${p.name} disconnected.`, { permanent: true });
       }
     }
   }
@@ -143,8 +157,9 @@ class Game {
     }
     this.phase = 'playing';
     this.turnIndex = 0;
-    this.pushLog('The game has started. Cards are dealt — 2 coins and 2 influence each.');
-    this.pushLog(`${this.players[0].name} goes first.`);
+    this.turnNumber = 1;
+    this.pushLog('The game has started. Cards are dealt — 2 coins and 2 influence each.', { permanent: true });
+    this.pushLog(`${this.players[0].name} goes first.`, { permanent: true });
     return true;
   }
 
@@ -158,7 +173,7 @@ class Game {
     if (alive.length <= 1) {
       this.phase = 'gameover';
       this.winnerId = alive[0] ? alive[0].id : null;
-      this.pushLog(alive[0] ? `${alive[0].name} wins the game!` : 'Game over.');
+      this.pushLog(alive[0] ? `${alive[0].name} wins the game!` : 'Game over.', { permanent: true });
       return;
     }
     let attempts = 0;
@@ -166,6 +181,7 @@ class Game {
       this.turnIndex = (this.turnIndex + 1) % this.players.length;
       attempts++;
     } while (!this.isAlive(this.players[this.turnIndex]) && attempts <= this.players.length);
+    this.turnNumber += 1;
     this.pushLog(`It's ${this.currentPlayer().name}'s turn.`);
   }
 
@@ -179,7 +195,7 @@ class Game {
     if (unrevealed.length === 1) {
       const idx = player.influences.indexOf(unrevealed[0]);
       player.influences[idx].revealed = true;
-      this.pushLog(`${player.name} loses their last influence — it was the ${unrevealed[0].card}!`);
+      this.pushLog(`${player.name} loses their last influence — it was the ${unrevealed[0].card}!`, { permanent: true });
       this.checkElimination(player);
       callback();
       return;
@@ -195,7 +211,7 @@ class Game {
     const card = player.influences[cardIndex];
     if (!card || card.revealed) throw new Error('Invalid card choice.');
     card.revealed = true;
-    this.pushLog(`${player.name} reveals ${card.card} and loses that influence.`);
+    this.pushLog(`${player.name} reveals ${card.card} and loses that influence.`, { permanent: true });
     this.checkElimination(player);
     const cb = this.pendingLoseInfluence.callback;
     this.pendingLoseInfluence = null;
@@ -204,7 +220,7 @@ class Game {
 
   checkElimination(player) {
     if (!this.isAlive(player)) {
-      this.pushLog(`${player.name} has been eliminated!`);
+      this.pushLog(`${player.name} has been eliminated!`, { permanent: true });
     }
   }
 
@@ -546,7 +562,8 @@ class Game {
       forceCoupAt: FORCE_COUP_AT,
       players,
       deckCount: this.deck.length,
-      log: this.log.slice(-40),
+      log: this.getVisibleLog().slice(-40),
+      logMode: this.logMode,
       pending: pendingView,
       loseInfluence: loseInfluenceView,
       exchange: exchangeView,
