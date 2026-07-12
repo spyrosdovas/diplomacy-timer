@@ -240,6 +240,7 @@ button { font-family: var(--font-body); }
   cursor: pointer;
 }
 .icon-btn.labeled {
+  position: relative;
   width: auto;
   height: 38px;
   padding: 0 12px;
@@ -250,6 +251,23 @@ button { font-family: var(--font-body); }
   font-weight: 700;
   color: var(--gold-bright);
   white-space: nowrap;
+}
+.chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--crimson-bright);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px var(--bg-elevated);
 }
 .room-pill, .deck-pill {
   background: rgba(212, 175, 55, 0.1);
@@ -572,6 +590,24 @@ button { font-family: var(--font-body); }
 .lb-crowns { color: var(--gold-bright); font-size: 15px; letter-spacing: 1px; white-space: nowrap; }
 
 .roundend-buttons { display: flex; flex-direction: column; gap: 8px; }
+
+.chat-card { display: flex; flex-direction: column; }
+.chat-messages {
+  min-height: 240px;
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 4px 0 12px;
+  padding-right: 2px;
+}
+.chat-msg { font-size: 13.5px; line-height: 1.4; word-break: break-word; }
+.chat-msg .chat-name { font-weight: 700; color: var(--gold-bright); margin-right: 5px; }
+.chat-msg.chat-me .chat-name { color: var(--crimson-bright); }
+.chat-empty { color: var(--ink-faint); font-size: 13px; text-align: center; margin-top: 30px; }
+.chat-form { display: flex; gap: 8px; }
+.chat-form .text-input { flex: 1; }
 
 .cheatsheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .cheatsheet-scroll { display: flex; flex-direction: column; gap: 6px; }

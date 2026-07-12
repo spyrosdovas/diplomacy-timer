@@ -68,6 +68,17 @@ class Game {
     this.roundNumber = 0;
     this.lastRoundWinnerId = null;
     this.readyForNextRound = new Set();
+    this.chat = []; // Remote mode only, client-side gated -- {id, playerId, name, text, ts}
+  }
+
+  addChatMessage(playerId, text) {
+    const player = this.getPlayer(playerId);
+    if (!player) throw new Error('Unknown player.');
+    const trimmed = String(text || '').trim().slice(0, 300);
+    if (!trimmed) return;
+    this.chat.push({ id: id(), playerId, name: player.name, text: trimmed, ts: Date.now() });
+    if (this.chat.length > 200) this.chat.shift();
+    logEvent(this.code, `[chat] ${player.name}: ${trimmed}`);
   }
 
   // permanent entries (revealed cards, eliminations, connection/game milestones) always
@@ -662,6 +673,7 @@ class Game {
       victoryTarget: this.victoryTarget,
       roundWinnerId: this.lastRoundWinnerId,
       readyPlayerIds: this.phase === 'roundover' ? [...this.readyForNextRound] : [],
+      chat: this.chat.slice(-100),
     };
   }
 }

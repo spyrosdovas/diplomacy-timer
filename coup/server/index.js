@@ -165,6 +165,17 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('chatMessage', ({ text }) => {
+    safe(socket, () => {
+      const sess = sessions.get(socket.id);
+      if (!sess) throw new Error('Not in a room.');
+      const game = getRoom(sess.code);
+      if (!game) throw new Error('Room not found.');
+      game.addChatMessage(sess.playerId, text);
+      broadcast(game);
+    });
+  });
+
   socket.on('reorderPlayers', ({ order }) => {
     safe(socket, () => {
       const sess = sessions.get(socket.id);

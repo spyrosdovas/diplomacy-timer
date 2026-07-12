@@ -225,6 +225,24 @@
   });
   $('#btn-copy-link-game').addEventListener('click', () => copyInviteLink(lastState ? lastState.code : ''));
 
+  $('#btn-chat-game').addEventListener('click', () => {
+    if (lastState) chatSeenCount = lastState.chat.length;
+    $('#chat-badge').classList.add('hidden');
+    openModal('#modal-chat');
+    const list = $('#chat-messages');
+    list.scrollTop = list.scrollHeight;
+    $('#chat-input').focus();
+  });
+
+  $('#chat-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('#chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('chatMessage', { text });
+    input.value = '';
+  });
+
   // ---------- Socket lifecycle ----------
   function rejoinIfNeeded() {
     if (!session) return;
@@ -525,8 +543,38 @@
     log.innerHTML = state.log.map((l) => `<div class="log-entry">${escapeHtml(l)}</div>`).join('');
     if (wasAtBottom) log.scrollTop = log.scrollHeight;
 
+    renderChat(state);
     renderActionZone(state, me);
     renderMe(state, me);
+  }
+
+  // Chat is Remote mode only -- Tabletop players are already in the same room.
+  let chatSeenCount = 0;
+  function renderChat(state) {
+    const chatBtn = $('#btn-chat-game');
+    if (state.logMode === 'off') {
+      chatBtn.classList.add('hidden');
+      return;
+    }
+    chatBtn.classList.remove('hidden');
+
+    const isOpen = !$('#modal-chat').classList.contains('hidden');
+    if (isOpen) chatSeenCount = state.chat.length;
+    const unread = Math.max(0, state.chat.length - chatSeenCount);
+    const badge = $('#chat-badge');
+    badge.textContent = unread > 9 ? '9+' : String(unread);
+    badge.classList.toggle('hidden', unread === 0);
+
+    const list = $('#chat-messages');
+    const wasAtBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 20;
+    list.innerHTML = state.chat.length
+      ? state.chat.map((m) => `
+          <div class="chat-msg ${m.playerId === state.you ? 'chat-me' : ''}">
+            <span class="chat-name">${escapeHtml(m.name)}:</span>${escapeHtml(m.text)}
+          </div>
+        `).join('')
+      : '<div class="chat-empty">No messages yet — say hi!</div>';
+    if (wasAtBottom) list.scrollTop = list.scrollHeight;
   }
 
   function renderPips(influences) {
