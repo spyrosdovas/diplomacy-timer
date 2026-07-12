@@ -53,6 +53,24 @@
     localStorage.removeItem('coup.session');
   }
 
+  function loadSavedName() {
+    try {
+      return localStorage.getItem('coup.playerName') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+  function saveName(name) {
+    try {
+      localStorage.setItem('coup.playerName', name);
+    } catch (e) {
+      // ignore (e.g. private browsing storage restrictions)
+    }
+    // Keep both fields in sync immediately, not just on next page load.
+    $('#create-name').value = name;
+    $('#join-name').value = name;
+  }
+
   function showScreen(id) {
     $$('.screen').forEach((s) => s.classList.add('hidden'));
     $(id).classList.remove('hidden');
@@ -106,12 +124,16 @@
     });
   });
 
+  $('#create-name').value = loadSavedName();
+  $('#join-name').value = loadSavedName();
+
   $('#btn-create').addEventListener('click', () => {
     const name = $('#create-name').value.trim();
     if (!name) return showToast('Enter your name first.');
     const fullLog = selectedLogMode !== 'off';
     socket.emit('createRoom', { name, fullLog, victoryTarget: selectedVictoryTarget }, (res) => {
       if (!res || !res.ok) return showToast((res && res.error) || 'Could not create room.');
+      saveName(name);
       saveSession({ code: res.code, playerId: res.playerId, token: res.token });
     });
   });
@@ -123,6 +145,7 @@
     if (!name) return showToast('Enter your name first.');
     socket.emit('joinRoom', { code, name }, (res) => {
       if (!res || !res.ok) return showToast((res && res.error) || 'Could not join room.');
+      saveName(name);
       saveSession({ code: res.code, playerId: res.playerId, token: res.token });
     });
   });

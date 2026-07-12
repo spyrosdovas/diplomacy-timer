@@ -33,6 +33,15 @@ This needs a persistent Node.js process (it uses WebSockets via Socket.IO), so i
 
 Game state is kept in memory per room; there's no database. That's intentional for a lightweight party game — rooms are cleaned up automatically once everyone disconnects.
 
+## Server logs
+
+Every meaningful event (room created, players joining/leaving/reconnecting, actions, challenges, round/match results, errors) is logged as one line: `[ISO timestamp] [room code] description`.
+
+- **On disk**: `coup/logs/server.log` (also printed to stdout, so it shows up in `npm start`'s terminal output and in your host's own log dashboard, e.g. Render's "Logs" tab).
+- **On the web**: `https://<your-deployed-url>/admin/logs?key=<ADMIN_LOG_KEY>` — a live-updating page (refreshes every 5s) of the most recent ~2000 lines. Add `&format=text` for a plain-text response instead of the HTML page.
+
+The key protects that page from being publicly browsable. Set `ADMIN_LOG_KEY` in your host's environment variables for a stable link; if you don't set one, the server generates a random key on startup and prints the full URL (with key) to the console/logs, so check there first.
+
 ## How to play (quick version)
 
 Each player starts with **2 coins** and **2 face-down influence cards** (character identities only they can see). On your turn you take one action — some are free (Income, Foreign Aid, Coup), others require *claiming* a character (Tax = Duke, Assassinate = Assassin, Steal = Captain, Exchange = Ambassador) whether or not you actually have it. Other players can **Challenge** your claim (if you're bluffing, you lose an influence; if not, they do) or **Block** with a countering character if the action allows it. Lose both influences and you're out. Last player standing wins. Full details are in the in-app cheat sheet.
@@ -46,6 +55,7 @@ coup/
     game.js    Authoritative game engine (rules, turns, challenges, blocks)
     rooms.js   Room code generation + in-memory room registry
     deck.js    Character deck construction/shuffling
+    logger.js  Structured event log (console + file + /admin/logs viewer)
   public/
     index.html Single-page app shell (home / lobby / game / modals)
     css/theme.css

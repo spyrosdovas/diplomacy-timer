@@ -1,16 +1,52 @@
 const path = require('node:path');
+const crypto = require('node:crypto');
 const express = require('express');
 const http = require('node:http');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
 const { createRoom, getRoom, removeRoom } = require('./rooms');
 const { MIN_PLAYERS, MAX_PLAYERS } = require('./game');
+const { logEvent, getRecentLogs, LOG_FILE } = require('./logger');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Detailed server log viewer, protected by a key so it isn't wide open on the
+// public internet. Set ADMIN_LOG_KEY in the environment for a stable link
+// across restarts/deploys; otherwise one is generated and printed on startup.
+const ADMIN_LOG_KEY = process.env.ADMIN_LOG_KEY || crypto.randomBytes(9).toString('base64url');
+if (!process.env.ADMIN_LOG_KEY) {
+  console.log(`No ADMIN_LOG_KEY set in the environment — generated one for this run.`);
+  console.log(`View logs at: /admin/logs?key=${ADMIN_LOG_KEY}`);
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+app.get('/admin/logs', (req, res) => {
+  if (req.query.key !== ADMIN_LOG_KEY) return res.status(403).send('Forbidden');
+  const lines = getRecentLogs(2000);
+  if (req.query.format === 'text') {
+    return res.type('text/plain').send(lines.join('\n'));
+  }
+  res.type('html').send(`<!doctype html><html><head><meta charset="utf-8">
+<title>Coup Server Logs</title>
+<meta http-equiv="refresh" content="5">
+<style>
+  body { background:#0d0b0c; color:#e8e0d0; font-family: ui-monospace, Menlo, Consolas, monospace;
+         font-size:12.5px; padding:16px; white-space:pre-wrap; word-break:break-word; }
+  .bar { color:#d4af37; margin-bottom:10px; font-weight:bold; }
+</style></head><body>
+<div class="bar">Coup server logs — ${lines.length} lines shown, newest last (auto-refreshes every 5s)</div>
+${lines.map((l) => escapeHtml(l)).join('\n')}
+</body></html>`);
+});
 
 // Tabletop mode: lets players scan an invite link straight off the host's screen
 // instead of typing the room code by hand.
@@ -40,6 +76,8 @@ function safe(socket, fn) {
   try {
     fn();
   } catch (err) {
+    const sess = sessions.get(socket.id);
+    logEvent(sess ? sess.code : null, `ERROR: ${err.message}`);
     socket.emit('errorMsg', err.message || 'Something went wrong.');
   }
 }
@@ -202,4 +240,5 @@ app.get('/health', (_req, res) => res.json({ ok: true, minPlayers: MIN_PLAYERS, 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Coup server listening on port ${PORT}`);
+  logEvent(null, `Server started on port ${PORT}. Log file: ${LOG_FILE}`);
 });

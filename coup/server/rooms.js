@@ -1,4 +1,5 @@
 const { Game } = require('./game');
+const { logEvent } = require('./logger');
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
 const rooms = new Map();
@@ -21,6 +22,7 @@ function createRoom({ fullLog = true, victoryTarget = 1 } = {}) {
   const parsed = parseInt(victoryTarget, 10);
   game.victoryTarget = Number.isFinite(parsed) ? Math.min(3, Math.max(1, parsed)) : 1;
   rooms.set(code, game);
+  logEvent(code, `Room created (mode=${game.logMode}, victoryTarget=${game.victoryTarget}).`);
   return game;
 }
 
@@ -29,7 +31,9 @@ function getRoom(code) {
 }
 
 function removeRoom(code) {
-  rooms.delete(code);
+  if (rooms.delete(code)) {
+    logEvent(code, 'Room removed (cleaned up).');
+  }
 }
 
 // Periodically clean up empty/stale rooms so memory doesn't grow forever.
@@ -39,9 +43,9 @@ setInterval(() => {
     const noOneConnected = game.players.length === 0 || game.players.every((p) => !p.connected);
     const stale = now - game.createdAt > 1000 * 60 * 60 * 6; // 6 hours
     if (noOneConnected && (game.phase !== 'lobby' || stale)) {
-      rooms.delete(code);
+      removeRoom(code);
     } else if (game.players.length === 0) {
-      rooms.delete(code);
+      removeRoom(code);
     }
   }
 }, 1000 * 60 * 10);

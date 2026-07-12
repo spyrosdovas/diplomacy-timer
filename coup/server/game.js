@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { buildDeck, shuffle } = require('./deck');
+const { logEvent } = require('./logger');
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
@@ -75,6 +76,7 @@ class Game {
   pushLog(msg, { permanent = false } = {}) {
     this.log.push({ text: msg, turn: this.turnNumber, permanent });
     if (this.log.length > 300) this.log.shift();
+    logEvent(this.code, msg);
   }
 
   getVisibleLog() {
