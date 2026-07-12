@@ -22,7 +22,8 @@ function createRoom({ fullLog = true, victoryTarget = 1 } = {}) {
   const parsed = parseInt(victoryTarget, 10);
   game.victoryTarget = Number.isFinite(parsed) ? Math.min(3, Math.max(1, parsed)) : 1;
   rooms.set(code, game);
-  logEvent(code, `Room created (mode=${game.logMode}, victoryTarget=${game.victoryTarget}).`);
+  const modeLabel = game.logMode === 'off' ? 'Tabletop' : 'Remote';
+  logEvent(code, `Room created (mode=${modeLabel}, victoryTarget=${game.victoryTarget}).`);
   return game;
 }
 
