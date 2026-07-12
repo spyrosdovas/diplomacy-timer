@@ -1,6 +1,7 @@
 const path = require('node:path');
 const express = require('express');
 const http = require('node:http');
+const QRCode = require('qrcode');
 const { Server } = require('socket.io');
 const { createRoom, getRoom, removeRoom } = require('./rooms');
 const { MIN_PLAYERS, MAX_PLAYERS } = require('./game');
@@ -10,6 +11,19 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Tabletop mode: lets players scan an invite link straight off the host's screen
+// instead of typing the room code by hand.
+app.get('/qr', async (req, res) => {
+  const text = String(req.query.text || '');
+  if (!text || text.length > 500) return res.status(400).end();
+  try {
+    const svg = await QRCode.toString(text, { type: 'svg', margin: 1, color: { dark: '#1a1518', light: '#ffffff' } });
+    res.type('image/svg+xml').send(svg);
+  } catch (err) {
+    res.status(500).end();
+  }
+});
 
 // socket.id -> { code, playerId }
 const sessions = new Map();

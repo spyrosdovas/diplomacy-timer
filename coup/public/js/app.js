@@ -148,8 +148,12 @@
     showScreen('#screen-home');
   }
 
+  function inviteUrl(code) {
+    return `${location.origin}${location.pathname}?code=${code}`;
+  }
+
   $('#btn-copy-link').addEventListener('click', async () => {
-    const url = `${location.origin}${location.pathname}?code=${$('#lobby-code').textContent}`;
+    const url = inviteUrl($('#lobby-code').textContent);
     try {
       await navigator.clipboard.writeText(url);
       showToast('Invite link copied!');
@@ -213,8 +217,14 @@
     const isHost = state.hostId === state.you;
     const list = $('#lobby-players');
     const seatHint = $('#seat-hint');
+    const qrBlock = $('#lobby-qr');
 
     if (state.logMode === 'off') {
+      qrBlock.classList.remove('hidden');
+      const qrImg = $('#qr-img');
+      const wantedSrc = `/qr?text=${encodeURIComponent(inviteUrl(state.code))}`;
+      if (qrImg.getAttribute('src') !== wantedSrc) qrImg.src = wantedSrc;
+
       list.classList.add('seat-list');
       seatHint.classList.remove('hidden');
       seatHint.textContent = isHost
@@ -222,6 +232,8 @@
         : 'The host is arranging seating order to match how you\'re sitting around the table.';
       renderSeatOrderList(state, isHost);
     } else {
+      qrBlock.classList.add('hidden');
+
       list.classList.remove('seat-list');
       seatHint.classList.add('hidden');
       list.style.height = '';
