@@ -9,6 +9,21 @@
     Contessa: { cls: 'char-contessa', symbol: '★' },
   };
 
+  const LOG_MODE_COPY = {
+    full: {
+      label: 'Remote Game',
+      hint: 'Full history, always visible.',
+      badge: '🌐 Remote',
+      lobby: '🌐 Remote Game — full log stays visible all game.',
+    },
+    off: {
+      label: 'Tabletop Game',
+      hint: 'Short memory, like a real table — claims fade after one turn. Revealed cards and eliminations always stick.',
+      badge: '🪑 Tabletop',
+      lobby: '🪑 Tabletop Game — claims fade after the next turn. Revealed cards & eliminations always stick. Full log returns at game end.',
+    },
+  };
+
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -79,6 +94,14 @@
       saveSession({ code: res.code, playerId: res.playerId, token: res.token });
     });
   });
+
+  function updateFullLogToggleText() {
+    const copy = LOG_MODE_COPY[$('#create-fulllog').checked ? 'full' : 'off'];
+    $('#fulllog-label').textContent = copy.label;
+    $('#fulllog-hint').textContent = copy.hint;
+  }
+  $('#create-fulllog').addEventListener('change', updateFullLogToggleText);
+  updateFullLogToggleText();
 
   $('#btn-join').addEventListener('click', () => {
     const code = $('#join-code').value.trim().toUpperCase();
@@ -180,9 +203,7 @@
   }
 
   function logModeText(state) {
-    return state.logMode === 'off'
-      ? '🫥 Fading Log — claims and turn announcements disappear after the next player\'s turn. Revealed cards and eliminations always stay visible. Full log returns when the game ends.'
-      : '📜 Full Log Shown — every action stays in the log for the whole game.';
+    return LOG_MODE_COPY[state.logMode === 'off' ? 'off' : 'full'].lobby;
   }
 
   function renderLobby(state) {
@@ -217,7 +238,7 @@
     $('#game-code').textContent = state.code;
     $('#deck-count').textContent = `🂠 ${state.deckCount}`;
     const pill = $('#log-mode-pill');
-    pill.textContent = state.logMode === 'off' ? '🫥 Fading Log' : '📜 Full Log';
+    pill.textContent = LOG_MODE_COPY[state.logMode === 'off' ? 'off' : 'full'].badge;
     pill.title = logModeText(state);
 
     const me = state.players.find((p) => p.id === state.you);
