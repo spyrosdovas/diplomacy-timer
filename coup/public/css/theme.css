@@ -271,6 +271,7 @@ button { font-family: var(--font-body); }
 .section-title { font-size: 14px; color: var(--gold-bright); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 14px; }
 
 .qr-block { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 4px 0; }
+.qr-block-spaced { margin: 12px 0 20px; }
 .qr-card {
   background: #fff;
   border: 1px solid var(--border);
