@@ -28,6 +28,10 @@
   let pendingActionType = null; // when opening target modal
   let exchangeSelection = [];
 
+  const SEAT_ITEM_HEIGHT = 60; // must match .seat-item height + gap in CSS
+  let seatOrder = []; // host's working seating order (array of player ids), Tabletop mode only
+  let seatDragCtx = null;
+
   function loadSession() {
     try {
       const raw = localStorage.getItem('coup.session');
@@ -207,15 +211,30 @@
     $('#lobby-count').textContent = state.players.length;
     $('#lobby-logmode').textContent = logModeText(state);
     const isHost = state.hostId === state.you;
-    $('#lobby-players').innerHTML = state.players.map((p) => `
-      <li>
-        <span class="player-name">${escapeHtml(p.name)}
-          ${p.id === state.hostId ? '<span class="host-badge">HOST</span>' : ''}
-          ${p.id === state.you ? '<span class="you-badge">YOU</span>' : ''}
-        </span>
-        <span>${p.connected ? '' : '⚠️ offline'}</span>
-      </li>
-    `).join('');
+    const list = $('#lobby-players');
+    const seatHint = $('#seat-hint');
+
+    if (state.logMode === 'off') {
+      list.classList.add('seat-list');
+      seatHint.classList.remove('hidden');
+      seatHint.textContent = isHost
+        ? 'Drag players into your real sitting order — play will proceed clockwise from whoever you put first.'
+        : 'The host is arranging seating order to match how you\'re sitting around the table.';
+      renderSeatOrderList(state, isHost);
+    } else {
+      list.classList.remove('seat-list');
+      seatHint.classList.add('hidden');
+      list.style.height = '';
+      list.innerHTML = state.players.map((p) => `
+        <li>
+          <span class="player-name">${escapeHtml(p.name)}
+            ${p.id === state.hostId ? '<span class="host-badge">HOST</span>' : ''}
+            ${p.id === state.you ? '<span class="you-badge">YOU</span>' : ''}
+          </span>
+          <span>${p.connected ? '' : '⚠️ offline'}</span>
+        </li>
+      `).join('');
+    }
 
     const startBtn = $('#btn-start');
     if (isHost) {
@@ -230,6 +249,95 @@
     }
   }
 
+  // Tabletop mode: seating order doubles as turn order. Host can drag to reorder;
+  // everyone else sees a live, read-only view of the current arrangement.
+  function renderSeatOrderList(state, isHost) {
+    const list = $('#lobby-players');
+    // The server's player order is always the source of truth (it's exactly what
+    // determines turn order). Only skip re-syncing while a local drag is in
+    // progress, so an in-flight gesture isn't clobbered by an unrelated broadcast.
+    if (!seatDragCtx) {
+      seatOrder = state.players.map((p) => p.id);
+    }
+
+    list.style.height = `${seatOrder.length * SEAT_ITEM_HEIGHT - (SEAT_ITEM_HEIGHT - 52)}px`;
+    list.innerHTML = seatOrder.map((id, i) => {
+      const p = state.players.find((pl) => pl.id === id);
+      if (!p) return '';
+      return `
+        <li class="seat-item" data-player-id="${p.id}" style="transform: translateY(${i * SEAT_ITEM_HEIGHT}px)">
+          <span class="seat-order-num">${i + 1}</span>
+          <span class="player-name">${escapeHtml(p.name)}
+            ${p.id === state.hostId ? '<span class="host-badge">HOST</span>' : ''}
+            ${p.id === state.you ? '<span class="you-badge">YOU</span>' : ''}
+            ${!p.connected ? ' ⚠️' : ''}
+          </span>
+          ${isHost ? `<span class="seat-handle" data-handle="${p.id}">⠿</span>` : ''}
+        </li>`;
+    }).join('');
+
+    if (isHost) {
+      $$('.seat-handle').forEach((handle) => {
+        handle.addEventListener('pointerdown', (e) => startSeatDrag(e, handle.dataset.handle));
+      });
+    }
+  }
+
+  function startSeatDrag(e, playerId) {
+    e.preventDefault();
+    const list = $('#lobby-players');
+    const item = list.querySelector(`.seat-item[data-player-id="${playerId}"]`);
+    if (!item) return;
+    const startIndex = seatOrder.indexOf(playerId);
+    seatDragCtx = { playerId, startIndex, currentIndex: startIndex, startClientY: e.clientY };
+    item.classList.add('seat-dragging');
+    item.setPointerCapture(e.pointerId);
+    item.addEventListener('pointermove', onSeatDragMove);
+    item.addEventListener('pointerup', onSeatDragEnd);
+    item.addEventListener('pointercancel', onSeatDragEnd);
+  }
+
+  function onSeatDragMove(e) {
+    if (!seatDragCtx) return;
+    const list = $('#lobby-players');
+    const item = list.querySelector(`.seat-item[data-player-id="${seatDragCtx.playerId}"]`);
+    if (!item) return;
+    const deltaY = e.clientY - seatDragCtx.startClientY;
+    const maxTranslate = (seatOrder.length - 1) * SEAT_ITEM_HEIGHT;
+    const translate = Math.max(0, Math.min(maxTranslate, seatDragCtx.startIndex * SEAT_ITEM_HEIGHT + deltaY));
+    item.style.transform = `translateY(${translate}px)`;
+
+    const newIndex = Math.round(translate / SEAT_ITEM_HEIGHT);
+    if (newIndex !== seatDragCtx.currentIndex) {
+      const [moved] = seatOrder.splice(seatDragCtx.currentIndex, 1);
+      seatOrder.splice(newIndex, 0, moved);
+      seatDragCtx.currentIndex = newIndex;
+      seatOrder.forEach((id, i) => {
+        const el = list.querySelector(`.seat-item[data-player-id="${id}"]`);
+        if (!el) return;
+        const numEl = el.querySelector('.seat-order-num');
+        if (numEl) numEl.textContent = i + 1;
+        if (id === seatDragCtx.playerId) return; // dragged item follows the pointer, not the grid
+        el.style.transform = `translateY(${i * SEAT_ITEM_HEIGHT}px)`;
+      });
+    }
+  }
+
+  function onSeatDragEnd(e) {
+    if (!seatDragCtx) return;
+    const list = $('#lobby-players');
+    const item = list.querySelector(`.seat-item[data-player-id="${seatDragCtx.playerId}"]`);
+    if (item) {
+      item.classList.remove('seat-dragging');
+      item.style.transform = `translateY(${seatDragCtx.currentIndex * SEAT_ITEM_HEIGHT}px)`;
+      item.removeEventListener('pointermove', onSeatDragMove);
+      item.removeEventListener('pointerup', onSeatDragEnd);
+      item.removeEventListener('pointercancel', onSeatDragEnd);
+    }
+    seatDragCtx = null;
+    socket.emit('reorderPlayers', { order: seatOrder });
+  }
+
   function renderGame(state) {
     $('#game-code').textContent = state.code;
     $('#deck-count').textContent = `🂠 ${state.deckCount}`;
@@ -240,7 +348,17 @@
     const me = state.players.find((p) => p.id === state.you);
     const others = state.players.filter((p) => p.id !== state.you);
 
-    $('#opponents-row').innerHTML = others.map((p) => renderOpponentCard(p, state)).join('');
+    if (state.logMode === 'off') {
+      $('#opponents-row').classList.add('hidden');
+      $('#opponents-row').innerHTML = '';
+      $('#seat-circle').classList.remove('hidden');
+      renderSeatCircle(state);
+    } else {
+      $('#seat-circle').classList.add('hidden');
+      $('#seat-circle').innerHTML = '';
+      $('#opponents-row').classList.remove('hidden');
+      $('#opponents-row').innerHTML = others.map((p) => renderOpponentCard(p, state)).join('');
+    }
 
     const log = $('#game-log');
     const wasAtBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
@@ -262,6 +380,34 @@
         <div class="opp-influences">${pips}</div>
       </div>
     `;
+  }
+
+  // Tabletop mode: circular seating layout matching the host's drag-arranged order.
+  // Seat 0 (first to act) anchors the bottom; seats proceed clockwise from there,
+  // mirroring how turns actually move around a real table.
+  function renderSeatCircle(state) {
+    const container = $('#seat-circle');
+    const n = state.players.length;
+    const radiusPct = 34;
+    const nodes = state.players.map((p, i) => {
+      const rad = (i * 360 * Math.PI) / (180 * n);
+      // Clockwise from the bottom (seat 0) moves toward the left first, matching
+      // a clock face: 6 o'clock -> 7,8,9 (left) -> 12 (top) -> 3 (right) -> 6.
+      const dx = (-radiusPct * Math.sin(rad)).toFixed(1);
+      const dy = (radiusPct * Math.cos(rad)).toFixed(1);
+      const isTurn = state.turnPlayerId === p.id;
+      const isMe = p.id === state.you;
+      const pips = p.influences.filter((c) => !c.revealed).map(() => `<div class="pip facedown"></div>`).join('');
+      return `
+        <div class="seat-node ${isTurn ? 'is-turn' : ''} ${p.alive ? '' : 'is-dead'} ${isMe ? 'is-me' : ''}"
+             style="left: calc(50% + ${dx}%); top: calc(50% + ${dy}%);">
+          ${!p.connected ? '<span class="opp-disconnected">⚠️</span>' : ''}
+          <div class="opp-name">${escapeHtml(isMe ? 'You' : p.name)}</div>
+          <div class="opp-coins">🪙 ${p.coins}</div>
+          <div class="opp-influences">${pips}</div>
+        </div>`;
+    }).join('');
+    container.innerHTML = `<div class="seat-table-surface"></div>${nodes}`;
   }
 
   function renderMe(state, me) {

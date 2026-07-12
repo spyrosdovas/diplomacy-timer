@@ -269,6 +269,53 @@ button { font-family: var(--font-body); }
 .host-badge { font-size: 10px; color: var(--bg); background: var(--gold); border-radius: 6px; padding: 2px 6px; margin-left: 8px; font-weight: 700; letter-spacing: 0.04em; }
 .you-badge { font-size: 10px; color: var(--ink-dim); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; margin-left: 8px; }
 
+/* Tabletop mode: drag-to-reorder seating list in the lobby */
+.seat-hint { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 2px; line-height: 1.4; }
+.seat-list { position: relative; list-style: none; margin: 0; padding: 0; }
+.seat-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0 14px;
+  transition: transform 0.15s ease;
+  touch-action: none;
+}
+/* #lobby-players (id) beats the plain ".player-list li" rule's justify-content */
+#lobby-players .seat-item { justify-content: flex-start; }
+.seat-item.seat-dragging {
+  transition: none;
+  z-index: 20;
+  border-color: var(--gold);
+  box-shadow: var(--shadow);
+  background: var(--panel-2);
+}
+.seat-order-num {
+  font-family: var(--font-display);
+  color: var(--gold-bright);
+  font-weight: 700;
+  font-size: 14px;
+  width: 18px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+.seat-handle {
+  cursor: grab;
+  color: var(--ink-faint);
+  font-size: 18px;
+  padding: 4px 6px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  touch-action: none;
+  user-select: none;
+}
+
 /* ---------- Game screen ---------- */
 #screen-game { background: var(--bg); }
 
@@ -303,6 +350,35 @@ button { font-family: var(--font-body); }
 }
 .pip.facedown { background: repeating-linear-gradient(135deg, #2a2226, #2a2226 4px, #221b1d 4px, #221b1d 8px); }
 .opp-disconnected { position: absolute; top: 4px; right: 6px; font-size: 10px; color: var(--ink-faint); }
+
+/* Tabletop mode: circular seating layout, first-to-act at the bottom, clockwise */
+.seat-circle {
+  position: relative;
+  width: min(300px, 84vw);
+  aspect-ratio: 1;
+  margin: 18px auto 10px;
+}
+.seat-table-surface {
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(122, 63, 176, 0.12), rgba(140, 31, 43, 0.08) 70%, transparent 100%);
+  border: 1px solid var(--border-soft);
+}
+.seat-node {
+  position: absolute;
+  width: 84px;
+  margin-left: -42px;
+  margin-top: -38px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 8px 6px;
+}
+.seat-node.is-turn { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25), var(--shadow); }
+.seat-node.is-dead { opacity: 0.4; }
+.seat-node.is-me { border-color: var(--gold); background: rgba(212, 175, 55, 0.08); }
 
 .char-duke { background: linear-gradient(160deg, var(--duke), #4c2670); border-color: var(--duke); }
 .char-assassin { background: linear-gradient(160deg, #4a4a4a, #1c1c1c); border-color: #555; }

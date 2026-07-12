@@ -142,6 +142,21 @@ class Game {
     }
   }
 
+  // Lets the host arrange turn order (seating) before the game starts — used by
+  // Tabletop mode to match players' real-life seating so play proceeds around
+  // the "table" the same way it would in person.
+  reorderPlayers(requesterId, order) {
+    if (requesterId !== this.hostId) throw new Error('Only the host can arrange seating.');
+    if (this.phase !== 'lobby') throw new Error('Seating can only be arranged before the game starts.');
+    const currentIds = this.players.map((p) => p.id);
+    const isValidPermutation = Array.isArray(order)
+      && order.length === currentIds.length
+      && currentIds.every((id2) => order.includes(id2))
+      && new Set(order).size === order.length;
+    if (!isValidPermutation) throw new Error('Invalid seating order.');
+    this.players = order.map((id2) => this.getPlayer(id2));
+  }
+
   startGame(requesterId) {
     if (requesterId !== this.hostId) throw new Error('Only the host can start the game.');
     if (this.phase !== 'lobby') throw new Error('Game already started.');

@@ -78,6 +78,17 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('reorderPlayers', ({ order }) => {
+    safe(socket, () => {
+      const sess = sessions.get(socket.id);
+      if (!sess) throw new Error('Not in a room.');
+      const game = getRoom(sess.code);
+      if (!game) throw new Error('Room not found.');
+      game.reorderPlayers(sess.playerId, order);
+      broadcast(game);
+    });
+  });
+
   socket.on('action', ({ type, targetId }) => {
     safe(socket, () => {
       const sess = sessions.get(socket.id);
