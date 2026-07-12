@@ -191,18 +191,54 @@
   $('#btn-copy-link-game').addEventListener('click', () => copyInviteLink(lastState ? lastState.code : ''));
 
   // ---------- Socket lifecycle ----------
-  socket.on('connect', () => {
-    if (session) {
+  function rejoinIfNeeded() {
+    if (!session) return;
+    socket.emit('rejoinRoom', session, (res) => {
+      if (!res || !res.ok) {
+        clearSession();
+        showScreen('#screen-home');
+      }
+    });
+  }
+
+  socket.on('connect', rejoinIfNeeded);
+
+  // Phones commonly suspend the WebSocket while the tab/app is backgrounded
+  // without ever telling this page it disconnected. When the page becomes
+  // visible again, force a reconnect so a stale connection doesn't sit there
+  // silently until the user taps something and gets "Not in a room."
+  function recoverConnection() {
+    if (!session) return;
+    if (socket.connected) {
+      rejoinIfNeeded();
+    } else {
+      socket.connect();
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') recoverConnection();
+  });
+  window.addEventListener('pageshow', recoverConnection);
+  window.addEventListener('focus', recoverConnection);
+
+  socket.on('errorMsg', (msg) => {
+    if (msg === 'Not in a room.' && session) {
+      // The connection dropped and silently reconnected without us noticing
+      // in time. Recover the session so the next tap works, and say so
+      // instead of leaving the generic error as the last word.
       socket.emit('rejoinRoom', session, (res) => {
-        if (!res || !res.ok) {
+        if (res && res.ok) {
+          showToast('Connection recovered — try that again.');
+        } else {
           clearSession();
           showScreen('#screen-home');
+          showToast(msg);
         }
       });
+      return;
     }
+    showToast(msg);
   });
-
-  socket.on('errorMsg', (msg) => showToast(msg));
 
   socket.on('state', (state) => {
     lastState = state;
