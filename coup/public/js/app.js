@@ -2,7 +2,7 @@
   const socket = io();
 
   // Original vector emblems (not the commercial game's artwork) -- a crown for
-  // the Duke, a dagger for the Assassin, a ship's wheel for the Captain,
+  // the Duke, a dagger for the Assassin, crossed swords for the Captain,
   // scales for the Ambassador, a folding fan for the Contessa.
   const CHAR_META = {
     Duke: {
@@ -25,9 +25,18 @@
     Captain: {
       cls: 'char-captain', symbol: '♣',
       art: `<svg class="card-art" viewBox="0 0 100 100" fill="currentColor">
-        <path d="M22 30 Q22 16 36 16 L64 16 Q78 16 78 30 L78 38 Q78 58 50 72 Q22 58 22 38 Z"/>
-        <rect x="30" y="34" width="16" height="9" fill="#100d0f"/>
-        <rect x="54" y="34" width="16" height="9" fill="#100d0f"/>
+        <g transform="rotate(45 50 50)">
+          <path d="M50 8 L44 62 L56 62 Z"/>
+          <rect x="34" y="62" width="32" height="7" rx="2"/>
+          <rect x="46" y="69" width="8" height="16" rx="2"/>
+          <circle cx="50" cy="89" r="5"/>
+        </g>
+        <g transform="rotate(-45 50 50)">
+          <path d="M50 8 L44 62 L56 62 Z"/>
+          <rect x="34" y="62" width="32" height="7" rx="2"/>
+          <rect x="46" y="69" width="8" height="16" rx="2"/>
+          <circle cx="50" cy="89" r="5"/>
+        </g>
       </svg>`,
     },
     Ambassador: {
