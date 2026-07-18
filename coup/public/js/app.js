@@ -3,7 +3,7 @@
 
   // Original vector emblems (not the commercial game's artwork) -- a crown for
   // the Duke, a dagger for the Assassin, crossed swords for the Captain,
-  // scales for the Ambassador, a folding fan for the Contessa.
+  // a scroll for the Ambassador, a folding fan for the Contessa.
   const CHAR_META = {
     Duke: {
       cls: 'char-duke', symbol: '♦',
@@ -41,12 +41,13 @@
     },
     Ambassador: {
       cls: 'char-ambassador', symbol: '♥',
-      art: `<svg class="card-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="50" y1="18" x2="50" y2="78"/><line x1="22" y1="30" x2="78" y2="30"/>
-        <line x1="22" y1="30" x2="14" y2="55"/><line x1="22" y1="30" x2="30" y2="55"/>
-        <line x1="78" y1="30" x2="70" y2="55"/><line x1="78" y1="30" x2="86" y2="55"/>
-        <path d="M14 55 Q22 66 30 55" fill="none"/><path d="M70 55 Q78 66 86 55" fill="none"/>
-        <line x1="34" y1="82" x2="66" y2="82"/><circle cx="50" cy="18" r="4" fill="currentColor" stroke="none"/>
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="currentColor">
+        <ellipse cx="20" cy="50" rx="9" ry="27"/>
+        <ellipse cx="80" cy="50" rx="9" ry="27"/>
+        <rect x="20" y="26" width="60" height="48"/>
+        <rect x="32" y="38" width="36" height="5" rx="1" fill="#100d0f"/>
+        <rect x="32" y="48" width="36" height="5" rx="1" fill="#100d0f"/>
+        <rect x="32" y="58" width="24" height="5" rx="1" fill="#100d0f"/>
       </svg>`,
     },
     Contessa: {
