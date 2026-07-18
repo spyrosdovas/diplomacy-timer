@@ -24,11 +24,10 @@
     },
     Captain: {
       cls: 'char-captain', symbol: '♣',
-      art: `<svg class="card-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round">
-        <circle cx="50" cy="50" r="30"/>
-        <circle cx="50" cy="50" r="8" fill="currentColor" stroke="none"/>
-        <line x1="50" y1="14" x2="50" y2="86"/><line x1="14" y1="50" x2="86" y2="50"/>
-        <line x1="24" y1="24" x2="76" y2="76"/><line x1="76" y1="24" x2="24" y2="76"/>
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="currentColor">
+        <path d="M22 30 Q22 16 36 16 L64 16 Q78 16 78 30 L78 38 Q78 58 50 72 Q22 58 22 38 Z"/>
+        <rect x="30" y="34" width="16" height="9" fill="#100d0f"/>
+        <rect x="54" y="34" width="16" height="9" fill="#100d0f"/>
       </svg>`,
     },
     Ambassador: {
