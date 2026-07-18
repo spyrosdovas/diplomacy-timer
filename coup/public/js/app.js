@@ -1,13 +1,64 @@
 (() => {
   const socket = io();
 
+  // Original vector emblems (not the commercial game's artwork) -- a crown for
+  // the Duke, a dagger for the Assassin, a ship's wheel for the Captain,
+  // scales for the Ambassador, a folding fan for the Contessa.
   const CHAR_META = {
-    Duke: { cls: 'char-duke', symbol: '♦' },
-    Assassin: { cls: 'char-assassin', symbol: '♠' },
-    Captain: { cls: 'char-captain', symbol: '♣' },
-    Ambassador: { cls: 'char-ambassador', symbol: '♥' },
-    Contessa: { cls: 'char-contessa', symbol: '★' },
+    Duke: {
+      cls: 'char-duke', symbol: '♦',
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="currentColor">
+        <path d="M20 70 L20 45 L32 58 L50 30 L68 58 L80 45 L80 70 Z"/>
+        <rect x="18" y="70" width="64" height="10" rx="2"/>
+        <circle cx="50" cy="26" r="5"/><circle cx="24" cy="42" r="4"/><circle cx="76" cy="42" r="4"/>
+      </svg>`,
+    },
+    Assassin: {
+      cls: 'char-assassin', symbol: '♠',
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="currentColor">
+        <circle cx="50" cy="16" r="6"/>
+        <rect x="44" y="20" width="12" height="28" rx="3"/>
+        <rect x="28" y="48" width="44" height="8" rx="2"/>
+        <path d="M50 56 L60 60 L50 90 L40 60 Z"/>
+      </svg>`,
+    },
+    Captain: {
+      cls: 'char-captain', symbol: '♣',
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round">
+        <circle cx="50" cy="50" r="30"/>
+        <circle cx="50" cy="50" r="8" fill="currentColor" stroke="none"/>
+        <line x1="50" y1="14" x2="50" y2="86"/><line x1="14" y1="50" x2="86" y2="50"/>
+        <line x1="24" y1="24" x2="76" y2="76"/><line x1="76" y1="24" x2="24" y2="76"/>
+      </svg>`,
+    },
+    Ambassador: {
+      cls: 'char-ambassador', symbol: '♥',
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="50" y1="18" x2="50" y2="78"/><line x1="22" y1="30" x2="78" y2="30"/>
+        <line x1="22" y1="30" x2="14" y2="55"/><line x1="22" y1="30" x2="30" y2="55"/>
+        <line x1="78" y1="30" x2="70" y2="55"/><line x1="78" y1="30" x2="86" y2="55"/>
+        <path d="M14 55 Q22 66 30 55" fill="none"/><path d="M70 55 Q78 66 86 55" fill="none"/>
+        <line x1="34" y1="82" x2="66" y2="82"/><circle cx="50" cy="18" r="4" fill="currentColor" stroke="none"/>
+      </svg>`,
+    },
+    Contessa: {
+      cls: 'char-contessa', symbol: '★',
+      art: `<svg class="card-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+        <path d="M50 82 L18 34"/><path d="M50 82 L32 20"/><path d="M50 82 L50 16"/>
+        <path d="M50 82 L68 20"/><path d="M50 82 L82 34"/>
+        <path d="M18 34 Q50 6 82 34"/><circle cx="50" cy="82" r="5" fill="currentColor" stroke="none"/>
+      </svg>`,
+    },
   };
+
+  function renderCardFace(cardName) {
+    const meta = CHAR_META[cardName] || {};
+    return `
+      <span class="card-corner">${meta.symbol || ''}</span>
+      ${meta.art || ''}
+      <span class="card-name">${cardName || '?'}</span>
+    `;
+  }
 
   const LOG_MODE_COPY = {
     full: {
@@ -635,8 +686,7 @@
     $('#me-coins').textContent = `🪙 ${me.coins}`;
     $('#me-cards').innerHTML = me.influences.map((c) => {
       const meta = CHAR_META[c.card] || {};
-      const label = c.card ? `${meta.symbol ? meta.symbol + ' ' : ''}${c.card}` : '?';
-      return `<div class="me-card ${meta.cls || ''} ${c.revealed ? 'revealed' : ''}">${label}</div>`;
+      return `<div class="me-card ${meta.cls || ''} ${c.revealed ? 'revealed' : ''}">${renderCardFace(c.card)}</div>`;
     }).join('');
   }
 
@@ -657,7 +707,7 @@
         const meta = CHAR_META[opt.card] || {};
         const card = document.createElement('div');
         card.className = `big-card ${meta.cls || ''}`;
-        card.innerHTML = `<div class="symbol">${meta.symbol || ''}</div>${opt.card}`;
+        card.innerHTML = renderCardFace(opt.card);
         card.addEventListener('click', () => socket.emit('chooseLoseInfluence', { index: opt.index }));
         row.appendChild(card);
       });
@@ -682,7 +732,7 @@
         const meta = CHAR_META[card] || {};
         const el = document.createElement('div');
         el.className = `big-card ${meta.cls || ''} ${exchangeSelection.includes(i) ? 'selected' : ''}`;
-        el.innerHTML = `<div class="symbol">${meta.symbol || ''}</div>${card}`;
+        el.innerHTML = renderCardFace(card);
         el.addEventListener('click', () => {
           const idx = exchangeSelection.indexOf(i);
           if (idx >= 0) {
