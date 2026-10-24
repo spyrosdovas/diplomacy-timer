@@ -394,9 +394,17 @@ class Game {
 
       if (response === 'challenge') {
         if (!this.pending.challengeable) throw new Error('This action cannot be challenged.');
-        this._resolveChallenge(playerId, this.pending.actorId, this.pending.claim, (proven) => {
+        // Resolving a challenge can wait on the loser's chooseLoseInfluence
+        // pick (a separate, later event) when they have more than one card.
+        // Lock out further responses to this pending action for that window
+        // -- same "resolving" pattern coup/assassinate already use -- so a
+        // second eligible responder can't race in and corrupt this.pending
+        // before the challenge finishes.
+        const actionPending = this.pending;
+        this.pending = { kind: 'resolving' };
+        this._resolveChallenge(playerId, actionPending.actorId, actionPending.claim, (proven) => {
           if (proven) {
-            this._resolvePendingAction();
+            this._resolvePendingAction(actionPending);
           } else {
             this.pending = null;
             this.nextTurn();
@@ -413,7 +421,6 @@ class Game {
         if (!this.pending.blockableBy.includes(blockClaim)) {
           throw new Error('Invalid block claim.');
         }
-        const actor = this.getPlayer(this.pending.actorId);
         const blocker = player;
         this.pushLog(`${blocker.name} blocks, claiming ${blockClaim}.`);
         this.pending = {
@@ -449,14 +456,19 @@ class Game {
       if (this.pending.responses[playerId]) throw new Error('You already responded.');
 
       if (response === 'challenge') {
-        this._resolveChallenge(playerId, this.pending.blockerId, this.pending.blockClaim, (proven) => {
+        // Same lockout as the action-challenge path above, and for the same
+        // reason: this can wait on a chooseLoseInfluence pick before proven
+        // is known.
+        const blockPending = this.pending;
+        this.pending = { kind: 'resolving' };
+        this._resolveChallenge(playerId, blockPending.blockerId, blockPending.blockClaim, (proven) => {
           if (proven) {
             // Block claim upheld -> original action stays cancelled.
             this.pending = null;
             this.nextTurn();
           } else {
             // Block was a bluff -> original action proceeds.
-            this._resolvePendingAction();
+            this._resolvePendingAction(blockPending);
           }
         });
         return;
@@ -497,8 +509,12 @@ class Game {
     }
   }
 
-  _resolvePendingAction() {
-    const { type, actorId, targetId } = this.pending;
+  // Takes an explicit snapshot so a caller resolving a challenge can pass the
+  // action/block pending object it captured before locking this.pending to
+  // {kind:'resolving'} (see respond()) -- by the time a deferred challenge
+  // outcome comes back, this.pending itself is no longer that snapshot.
+  _resolvePendingAction(pendingAction = this.pending) {
+    const { type, actorId, targetId } = pendingAction;
     const actor = this.getPlayer(actorId);
     const target = targetId ? this.getPlayer(targetId) : null;
 
