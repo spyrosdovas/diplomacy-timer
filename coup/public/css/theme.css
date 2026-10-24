@@ -9,7 +9,7 @@
   --crimson-bright: #b3283a;
   --ink: #f3ead9;
   --ink-dim: #b8ab97;
-  --ink-faint: #7d7268;
+  --ink-faint: #938573;
   --border: rgba(212, 175, 55, 0.28);
   --border-soft: rgba(212, 175, 55, 0.14);
   --duke: #7a3fb0;
@@ -427,11 +427,15 @@ button { font-family: var(--font-body); }
 .seat-node.is-turn { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25), var(--shadow); }
 .seat-node.is-dead { opacity: 0.4; }
 
-.char-duke { background: linear-gradient(160deg, var(--duke), #4c2670); border-color: var(--duke); }
-.char-assassin { background: linear-gradient(160deg, #4a4a4a, #1c1c1c); border-color: #555; }
-.char-captain { background: linear-gradient(160deg, var(--captain), #123f5c); border-color: var(--captain); }
-.char-ambassador { background: linear-gradient(160deg, var(--ambassador), #1a5230); border-color: var(--ambassador); }
-.char-contessa { background: linear-gradient(160deg, var(--contessa), #5c131c); border-color: var(--contessa); }
+/* Each card gets a subtle top-left sheen layered into the same `background`
+   declaration as its base color gradient -- NOT a separate background-image
+   rule, which would need to out-cascade this one and silently win or lose
+   depending on source order (bitten by exactly that once already). */
+.char-duke { background: linear-gradient(160deg, rgba(255,255,255,0.12), transparent 42%), linear-gradient(160deg, var(--duke), #4c2670); border-color: var(--duke); }
+.char-assassin { background: linear-gradient(160deg, rgba(255,255,255,0.10), transparent 42%), linear-gradient(160deg, #4a4a4a, #1c1c1c); border-color: #555; }
+.char-captain { background: linear-gradient(160deg, rgba(255,255,255,0.12), transparent 42%), linear-gradient(160deg, var(--captain), #123f5c); border-color: var(--captain); }
+.char-ambassador { background: linear-gradient(160deg, rgba(255,255,255,0.12), transparent 42%), linear-gradient(160deg, var(--ambassador), #1a5230); border-color: var(--ambassador); }
+.char-contessa { background: linear-gradient(160deg, rgba(255,255,255,0.12), transparent 42%), linear-gradient(160deg, var(--contessa), #5c131c); border-color: var(--contessa); }
 
 .game-log {
   flex: 0 0 auto;
@@ -618,6 +622,7 @@ button { font-family: var(--font-body); }
 .cheatsheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .cheatsheet-scroll { display: flex; flex-direction: column; gap: 6px; }
 .cs-h { color: var(--gold-bright); margin-top: 16px; font-size: 15px; }
+.cs-h:first-child { margin-top: 0; }
 .cs-sub { color: var(--ink-faint); font-weight: 400; font-size: 11px; font-family: var(--font-body); display: block; margin-top: 2px; }
 .cs-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .cs-item { border-radius: 10px; padding: 10px 12px; border: 1px solid var(--border-soft); }
@@ -651,4 +656,34 @@ button { font-family: var(--font-body); }
 
 @media (min-width: 640px) {
   .screen-game-inner, #screen-game { max-width: 640px; margin: 0 auto; width: 100%; }
+}
+
+/* ---------- Hover & focus polish ----------
+   The app is mobile-first (hence no hover states up to this point), but it's
+   also used on desktop/tablet. (hover: hover) keeps these off touch devices,
+   where a "stuck" hover state from the last tap would otherwise look wrong. */
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn-ghost:hover { background: rgba(212, 175, 55, 0.18); }
+  .btn-text:hover { color: var(--ink-dim); }
+  .tab-btn:not(.active):hover { background: rgba(255, 255, 255, 0.05); color: var(--ink); }
+  .mode-card:not(.selected):hover { opacity: 0.85; border-color: var(--border); }
+  .action-btn:not(:disabled):hover { border-color: var(--gold); background: var(--panel); }
+  .target-item:hover { background: var(--panel-2); }
+  .icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+  .big-card:hover { border-color: var(--gold-bright); }
+  .player-list li:hover { border-color: var(--border); }
+}
+
+/* Keyboard-focus outline on real interactive elements only -- a plain div
+   with a click handler (.big-card, .target-item, .mode-card) isn't natively
+   focusable, so this only lights up for elements a keyboard user can
+   actually reach, never for a mouse/touch tap. */
+.btn:focus-visible,
+.tab-btn:focus-visible,
+.icon-btn:focus-visible,
+.text-input:focus-visible,
+.action-btn:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
 }
