@@ -94,6 +94,24 @@ function safe(socket, fn) {
   }
 }
 
+// Wraps a socket event handler that needs "the room this socket is currently
+// in": looks up the session and game, runs the handler, then broadcasts the
+// new state to everyone in the room. Covers every in-game event -- only
+// createRoom/joinRoom/rejoinRoom (no session yet) and leaveRoom/disconnect
+// (custom cleanup) stay as their own handlers below.
+function withRoom(socket, handler) {
+  return (data, ack) => {
+    safe(socket, () => {
+      const sess = sessions.get(socket.id);
+      if (!sess) throw new Error('Not in a room.');
+      const game = getRoom(sess.code);
+      if (!game) throw new Error('Room not found.');
+      handler(game, sess, data, ack);
+      broadcast(game);
+    });
+  };
+}
+
 io.on('connection', (socket) => {
   socket.on('createRoom', ({ name, fullLog, victoryTarget }, ack) => {
     safe(socket, () => {
@@ -131,105 +149,42 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('startGame', (_data, ack) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.startGame(sess.playerId);
-      ack && ack({ ok: true });
-      broadcast(game);
-    });
-  });
+  socket.on('startGame', withRoom(socket, (game, sess, _data, ack) => {
+    game.startGame(sess.playerId);
+    ack && ack({ ok: true });
+  }));
 
-  socket.on('readyForRound', () => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.readyUp(sess.playerId);
-      broadcast(game);
-    });
-  });
+  socket.on('readyForRound', withRoom(socket, (game, sess) => {
+    game.readyUp(sess.playerId);
+  }));
 
-  socket.on('endGame', () => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.endGame(sess.playerId);
-      broadcast(game);
-    });
-  });
+  socket.on('endGame', withRoom(socket, (game, sess) => {
+    game.endGame(sess.playerId);
+  }));
 
-  socket.on('chatMessage', ({ text }) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.addChatMessage(sess.playerId, text);
-      broadcast(game);
-    });
-  });
+  socket.on('chatMessage', withRoom(socket, (game, sess, { text }) => {
+    game.addChatMessage(sess.playerId, text);
+  }));
 
-  socket.on('reorderPlayers', ({ order }) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.reorderPlayers(sess.playerId, order);
-      broadcast(game);
-    });
-  });
+  socket.on('reorderPlayers', withRoom(socket, (game, sess, { order }) => {
+    game.reorderPlayers(sess.playerId, order);
+  }));
 
-  socket.on('action', ({ type, targetId }) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.handleAction(sess.playerId, type, targetId);
-      broadcast(game);
-    });
-  });
+  socket.on('action', withRoom(socket, (game, sess, { type, targetId }) => {
+    game.handleAction(sess.playerId, type, targetId);
+  }));
 
-  socket.on('respond', ({ response, blockClaim }) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.respond(sess.playerId, response, blockClaim);
-      broadcast(game);
-    });
-  });
+  socket.on('respond', withRoom(socket, (game, sess, { response, blockClaim }) => {
+    game.respond(sess.playerId, response, blockClaim);
+  }));
 
-  socket.on('chooseLoseInfluence', ({ index }) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.chooseLoseInfluence(sess.playerId, index);
-      broadcast(game);
-    });
-  });
+  socket.on('chooseLoseInfluence', withRoom(socket, (game, sess, { index }) => {
+    game.chooseLoseInfluence(sess.playerId, index);
+  }));
 
-  socket.on('exchangeChoice', ({ keepIndexes }) => {
-    safe(socket, () => {
-      const sess = sessions.get(socket.id);
-      if (!sess) throw new Error('Not in a room.');
-      const game = getRoom(sess.code);
-      if (!game) throw new Error('Room not found.');
-      game.exchangeChoice(sess.playerId, keepIndexes);
-      broadcast(game);
-    });
-  });
+  socket.on('exchangeChoice', withRoom(socket, (game, sess, { keepIndexes }) => {
+    game.exchangeChoice(sess.playerId, keepIndexes);
+  }));
 
   socket.on('leaveRoom', () => {
     safe(socket, () => {

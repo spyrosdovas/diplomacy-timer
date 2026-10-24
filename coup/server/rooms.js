@@ -41,11 +41,13 @@ function removeRoom(code) {
 setInterval(() => {
   const now = Date.now();
   for (const [code, game] of rooms.entries()) {
-    const noOneConnected = game.players.length === 0 || game.players.every((p) => !p.connected);
+    if (game.players.length === 0) {
+      removeRoom(code);
+      continue;
+    }
+    const noOneConnected = game.players.every((p) => !p.connected);
     const stale = now - game.createdAt > 1000 * 60 * 60 * 6; // 6 hours
     if (noOneConnected && (game.phase !== 'lobby' || stale)) {
-      removeRoom(code);
-    } else if (game.players.length === 0) {
       removeRoom(code);
     }
   }
